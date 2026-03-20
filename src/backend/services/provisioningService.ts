@@ -86,24 +86,49 @@ export const provisionTictoPurchase = async (customerData: any, tictoProductId: 
     } else if (linkedResources && typeof linkedResources === 'object') {
       if (linkedResources.plans) linkedResources.plans.forEach((id: any) => resourcesArray.push({ id, type: 'plan' }));
       if (linkedResources.onlineCourses) linkedResources.onlineCourses.forEach((id: any) => resourcesArray.push({ id, type: 'course' }));
-      if (linkedResources.simulated) linkedResources.simulated.forEach((id: any) => resourcesArray.push({ id, type: 'simulated' }));
-      if (linkedResources.presentialClasses) linkedResources.presentialClasses.forEach((id: any) => resourcesArray.push({ id, type: 'presential' }));
+      if (linkedResources.simulated) linkedResources.simulated.forEach((id: any) => resourcesArray.push({ id, type: 'simulated_class' }));
+      if (linkedResources.presentialClasses) linkedResources.presentialClasses.forEach((id: any) => resourcesArray.push({ id, type: 'presential_class' }));
     }
 
-    resourcesArray.forEach((res: any) => {
-      const idField = res.type ? `${res.type}Id` : 'resourceId';
+    for (const res of resourcesArray) {
+      let mappedType = res.type || 'unknown';
+      if (mappedType === 'simulated') mappedType = 'simulated_class';
+      if (mappedType === 'presential') mappedType = 'presential_class';
+
+      let realName = res.name || res.title || 'Recurso Vinculado';
+      let collectionName = '';
+      
+      switch(mappedType) {
+        case 'course': collectionName = 'online_courses'; break;
+        case 'plan': collectionName = 'plans'; break;
+        case 'simulated_class': collectionName = 'simulatedClasses'; break;
+        case 'presential_class': collectionName = 'classes'; break;
+      }
+
+      if (collectionName && res.id) {
+        try {
+          const docSnap = await dbAdmin.collection(collectionName).doc(res.id).get();
+          if (docSnap.exists) {
+            const data = docSnap.data();
+            realName = data?.title || data?.name || realName;
+          }
+        } catch (error) {
+          console.error(`Erro ao buscar nome do recurso ${res.id} na coleção ${collectionName}:`, error);
+        }
+      }
+
       accessesToGrant.push({
         id: crypto.randomUUID(),
-        type: res.type || 'unknown',
-        [idField]: res.id,
-        resourceId: res.id,
-        tictoId: safeProductId, // Adicionado para permitir revogação vinculada
-        name: res.name || res.title || 'Recurso Vinculado',
+        targetId: res.id,
+        type: mappedType,
+        title: realName,
+        days: accessDays,
         isActive: true,
+        tictoId: safeProductId,
         startDate: Timestamp.now(),
         endDate: Timestamp.fromDate(expirationDate)
       });
-    });
+    }
 
     // 3. Verificar se o e-mail do cliente já existe
     let userRecord;
