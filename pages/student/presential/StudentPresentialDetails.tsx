@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { classService } from '../../../services/classService';
 import { courseService } from '../../../services/courseService';
+import { classScheduleService } from '../../../services/classScheduleService';
+import { curriculumService } from '../../../services/curriculumService';
 import { Class } from '../../../types/class';
 import { OnlineCourse, CourseModule } from '../../../types/course';
 import { ArrowLeft, Calendar, GraduationCap, BookOpen, ChevronDown } from 'lucide-react';
@@ -21,23 +23,57 @@ export const StudentPresentialDetails: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'SCHEDULE' | 'PLANNING' | 'TEACHING'>('TEACHING');
   const [loading, setLoading] = useState(true);
   
+  // Tab availability flags
+  const [hasModules, setHasModules] = useState(false);
+  const [hasSchedule, setHasSchedule] = useState(false);
+  const [hasPlanning, setHasPlanning] = useState(false);
+  
   // Teaching Tab State
   const [modules, setModules] = useState<CourseModule[]>([]);
   const [selectedModule, setSelectedModule] = useState<CourseModule | null>(null);
   const [loadingModules, setLoadingModules] = useState(false);
 
-  const tabs = [
-    { id: 'TEACHING', label: 'ÁREA DE ENSINO', icon: GraduationCap },
-    { id: 'SCHEDULE', label: 'CRONOGRAMA', icon: Calendar },
-    { id: 'PLANNING', label: 'PLANEJAMENTO PEDAGÓGICO', icon: BookOpen },
-  ] as const;
+  const tabs = React.useMemo(() => [
+    { id: 'TEACHING', label: 'ÁREA DE ENSINO', icon: GraduationCap, show: hasModules },
+    { id: 'SCHEDULE', label: 'CRONOGRAMA', icon: Calendar, show: hasSchedule },
+    { id: 'PLANNING', label: 'PLANEJAMENTO PEDAGÓGICO', icon: BookOpen, show: hasPlanning },
+  ].filter(tab => tab.show), [hasModules, hasSchedule, hasPlanning]);
 
   useEffect(() => {
     const fetchClass = async () => {
       if (classId) {
         try {
           const data = await classService.getClassById(classId);
-          setCurrentClass(data);
+          if (data) {
+            setCurrentClass(data);
+            
+            // Check content availability in parallel
+            const [modulesData, eventsData, subjectsData] = await Promise.all([
+              courseService.getModules(classId),
+              classScheduleService.getScheduleEventsByClass(classId),
+              curriculumService.getSubjectsByClass(classId)
+            ]);
+            
+            const hModules = modulesData.length > 0;
+            const hSchedule = eventsData.length > 0;
+            const hPlanning = subjectsData.length > 0;
+            
+            setHasModules(hModules);
+            setHasSchedule(hSchedule);
+            setHasPlanning(hPlanning);
+            setModules(modulesData);
+
+            // Adjust active tab if current one is hidden
+            const availableIds = [
+              ...(hModules ? ['TEACHING'] : []),
+              ...(hSchedule ? ['SCHEDULE'] : []),
+              ...(hPlanning ? ['PLANNING'] : [])
+            ];
+
+            if (availableIds.length > 0 && !availableIds.includes(activeTab)) {
+              setActiveTab(availableIds[0] as any);
+            }
+          }
         } catch (error) {
           console.error("Error fetching class:", error);
         } finally {
@@ -168,7 +204,7 @@ export const StudentPresentialDetails: React.FC = () => {
             {tabs.map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => setActiveTab(tab.id as any)}
                 className={`flex items-center space-x-2 px-4 py-3 text-base font-medium transition-colors whitespace-nowrap border-b-2 ${
                   activeTab === tab.id 
                     ? 'border-red-600 text-red-600' 
@@ -183,25 +219,27 @@ export const StudentPresentialDetails: React.FC = () => {
 
           {/* Mobile Select Navigation */}
           <div className="md:hidden flex justify-center py-3">
-            <div className="relative w-full max-w-[280px]">
-              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-red-600 pointer-events-none">
-                {React.createElement(tabs.find(t => t.id === activeTab)?.icon || GraduationCap, { size: 18 })}
+            {tabs.length > 0 && (
+              <div className="relative w-full max-w-[280px]">
+                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-red-600 pointer-events-none">
+                  {React.createElement(tabs.find(t => t.id === activeTab)?.icon || GraduationCap, { size: 18 })}
+                </div>
+                <select
+                  value={activeTab}
+                  onChange={(e) => setActiveTab(e.target.value as any)}
+                  className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-lg pl-10 pr-10 py-2.5 text-sm font-bold appearance-none focus:outline-none focus:ring-1 focus:ring-red-600/50"
+                >
+                  {tabs.map((tab) => (
+                    <option key={tab.id} value={tab.id}>
+                      {tab.label}
+                    </option>
+                  ))}
+                </select>
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none">
+                  <ChevronDown size={16} />
+                </div>
               </div>
-              <select
-                value={activeTab}
-                onChange={(e) => setActiveTab(e.target.value as any)}
-                className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-lg pl-10 pr-10 py-2.5 text-sm font-bold appearance-none focus:outline-none focus:ring-1 focus:ring-red-600/50"
-              >
-                {tabs.map((tab) => (
-                  <option key={tab.id} value={tab.id}>
-                    {tab.label}
-                  </option>
-                ))}
-              </select>
-              <div className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none">
-                <ChevronDown size={16} />
-              </div>
-            </div>
+            )}
           </div>
         </div>
       </div>
