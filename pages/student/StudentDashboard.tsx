@@ -1,15 +1,14 @@
 
 import React, { useState, useEffect } from 'react';
-import { createPortal } from 'react-dom';
 import { useSearchParams } from 'react-router-dom';
 import { 
   LayoutDashboard, Coffee, Loader2, AlertTriangle, 
-  RefreshCw, CheckCircle2, FastForward, Clock, ShieldCheck, X, GraduationCap, Lock, Check, Trophy
+  RefreshCw, CheckCircle2, Clock, ShieldCheck, X, Check, Trophy
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { StudentGoalCard, StudentGoal } from '../../components/student/StudentGoalCard';
 import { getDashboardData, toggleGoalStatus, getStudentConfig, getStudentCompletedMetas, getLocalISODate, checkAndUnlockSimulados } from '../../services/studentService';
-import { rescheduleOverdueTasks, getNextPendingGoals, anticipateGoals, ScheduledEvent, fetchFullPlanData, scheduleUserSimulado, anticipateFutureGoals, anticipateAndShiftGoals } from '../../services/scheduleService';
+import { rescheduleOverdueTasks, fetchFullPlanData, scheduleUserSimulado, anticipateAndShiftGoals } from '../../services/scheduleService';
 import { useAuth } from '../../contexts/AuthContext';
 import ConfirmationModal from '../../components/ui/ConfirmationModal';
 import { SimuladoDashboardCard, ComputedSimulado } from '../../components/student/SimuladoDashboardCard';

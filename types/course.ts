@@ -82,6 +82,11 @@ export interface CourseLesson {
   pdfCount?: number;
 }
 
+export interface CourseStructureModule extends CourseModule {
+  folders: (CourseSubModule & { lessons: CourseLesson[] })[];
+  looseLessons: CourseLesson[];
+}
+
 export interface CourseFormData {
   title: string;
   description?: string;

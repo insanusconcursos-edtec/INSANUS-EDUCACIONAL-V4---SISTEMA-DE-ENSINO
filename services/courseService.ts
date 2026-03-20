@@ -20,7 +20,7 @@ import {
   arrayRemove
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { OnlineCourse, CourseFormData, CourseModule, CourseSubModule, CourseLesson, CourseContent } from '../types/course';
+import { OnlineCourse, CourseFormData, CourseModule, CourseSubModule, CourseLesson, CourseContent, CourseStructureModule } from '../types/course';
 import { CourseEditalStructure } from '../types/courseEdital';
 
 const COLLECTION_NAME = 'online_courses';
@@ -609,14 +609,14 @@ export const courseService = {
   // --- NOVOS MÉTODOS PARA VINCULAÇÃO E UPLOAD DO EDITAL ---
 
   // Retorna estrutura completa do curso (Módulos + Pastas + Aulas) para o modal de vinculação
-  getCourseStructure: async (courseId: string) => {
+  getCourseStructure: async (courseId: string): Promise<CourseStructureModule[]> => {
     try {
       // 1. Busca Módulos
       const modulesRef = collection(db, MODULES_COLLECTION);
       const qModules = query(modulesRef, where('courseId', '==', courseId), orderBy('order', 'asc'));
       const modulesSnap = await getDocs(qModules);
 
-      const structure = [];
+      const structure: CourseStructureModule[] = [];
 
       // 2. Para cada módulo, busca pastas e aulas
       for (const modDoc of modulesSnap.docs) {
@@ -694,8 +694,8 @@ export const getAllOnlineCourses = async () => {
     }));
     
     return coursesWithStructure;
-  } catch (error) {
-    console.error("Erro ao buscar todos os cursos online:", error);
-    throw error;
+  } catch (_error) {
+    console.error("Erro ao buscar todos os cursos online:", _error);
+    throw _error;
   }
 };

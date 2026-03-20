@@ -73,6 +73,7 @@ export interface SimulatedExam {
   autodiagnosisDisciplines?: ExamDiscipline[]; // Disciplinas cadastradas para o autodiagnóstico (FIX: Renamed for clarity)
   
   status: ExamStatus;
+  publishDate?: string | null;
   createdAt?: any;
   updatedAt?: any;
 }
@@ -85,6 +86,7 @@ export interface SimulatedClass {
   subcategoryId: string;
   organization: string; // Órgão (ex: PF, PRF)
   buyLink: string;
+  presentationVideoUrl?: string;
   
   // Metadata
   createdAt?: any;

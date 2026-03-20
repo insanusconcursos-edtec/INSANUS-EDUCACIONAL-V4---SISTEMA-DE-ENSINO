@@ -17,7 +17,8 @@ import {
   orderBy, 
   getDoc,
   serverTimestamp,
-  Timestamp 
+  Timestamp,
+  FieldValue
 } from 'firebase/firestore';
 import { db, auth as mainAuth, firebaseConfig } from './firebase';
 
@@ -29,8 +30,8 @@ export interface AccessItem {
   targetId: string; // The ID of the Plan, Simulated Class, Course or Product
   title: string;
   days: number;
-  startDate: any; // Timestamp
-  endDate: any; // Timestamp
+  startDate: Timestamp;
+  endDate: Timestamp;
   isActive: boolean;
   isScholarship?: boolean;
   tictoId?: string;
@@ -51,7 +52,7 @@ export interface Student {
   whatsapp?: string;
   role: 'student';
   status?: 'active' | 'inactive';
-  createdAt?: any;
+  createdAt?: Timestamp | FieldValue;
   access: AccessItem[];
   products?: AccessItem[]; // Array of products (combos) released to the user
   courses?: UserCourseAccess[]; // Separate array for Online Courses (Legacy/Alternative)
@@ -59,6 +60,7 @@ export interface Student {
   
   // Statistics
   lifetimeMinutes?: number; // Tempo total acumulado na vida (minutos)
+  currentPlanId?: string;
   planStats?: Record<string, { // Chave é o planId
     minutes: number;
     completedGoals?: number;
@@ -115,9 +117,10 @@ export const createStudent = async (data: CreateStudentData): Promise<string> =>
     
     return uid;
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error creating student:", error);
-    throw new Error(error.message || "Erro ao criar aluno.");
+    const errorMessage = error instanceof Error ? error.message : "Erro ao criar aluno.";
+    throw new Error(errorMessage);
   } finally {
     // 5. Delete Secondary App to free resources
     await deleteApp(secondaryApp);
@@ -138,13 +141,16 @@ export const updateStudent = async (uid: string, data: Partial<Student>) => {
 export const sendPasswordReset = async (email: string) => {
   try {
     await sendPasswordResetEmail(mainAuth, email);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Reset Password Error:", error);
-    if (error.code === 'auth/user-not-found') {
-      throw new Error('Usuário não encontrado no sistema de autenticação.');
-    }
-    if (error.code === 'auth/invalid-email') {
-      throw new Error('E-mail inválido.');
+    if (error && typeof error === 'object' && 'code' in error) {
+      const authError = error as { code: string };
+      if (authError.code === 'auth/user-not-found') {
+        throw new Error('Usuário não encontrado no sistema de autenticação.');
+      }
+      if (authError.code === 'auth/invalid-email') {
+        throw new Error('E-mail inválido.');
+      }
     }
     throw new Error('Erro ao enviar e-mail de redefinição. Tente novamente.');
   }

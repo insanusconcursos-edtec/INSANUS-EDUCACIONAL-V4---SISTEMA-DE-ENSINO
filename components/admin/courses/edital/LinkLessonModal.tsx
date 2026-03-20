@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, PlayCircle, Folder, CheckSquare, Square, Loader2, Save, FileText } from 'lucide-react';
 import { courseService } from '../../../../services/courseService';
+import { CourseLesson, CourseStructureModule } from '../../../../types/course';
 import { LinkedLesson } from '../../../../types/courseEdital';
 
 interface LinkLessonModalProps {
@@ -13,7 +14,7 @@ interface LinkLessonModalProps {
 }
 
 interface LessonRowProps {
-  lesson: any;
+  lesson: CourseLesson;
   isSelected: boolean;
   onClick: () => void;
 }
@@ -37,7 +38,7 @@ const LessonRow: React.FC<LessonRowProps> = ({ lesson, isSelected, onClick }) =>
 );
 
 export function LinkLessonModal({ isOpen, onClose, courseId, onSave, initialSelectedIds = [] }: LinkLessonModalProps) {
-  const [structure, setStructure] = useState<any[]>([]);
+  const [structure, setStructure] = useState<CourseStructureModule[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set(initialSelectedIds));
   const [expandedModules, setExpandedModules] = useState<Record<string, boolean>>({});
@@ -58,18 +59,18 @@ export function LinkLessonModal({ isOpen, onClose, courseId, onSave, initialSele
         // Auto-expandir módulos que já tenham aulas selecionadas
         const toExpand: Record<string, boolean> = {};
         
-        data.forEach((mod: any) => {
+        data.forEach((mod: CourseStructureModule) => {
             let hasSelection = false;
             
             // Check loose lessons
-            if (mod.looseLessons?.some((l: any) => initialSelectedIds.includes(l.id))) {
+            if (mod.looseLessons?.some((l: CourseLesson) => initialSelectedIds.includes(l.id))) {
                 hasSelection = true;
             }
             
             // Check folders
             if (!hasSelection && mod.folders) {
-                mod.folders.forEach((f: any) => {
-                    if (f.lessons?.some((l: any) => initialSelectedIds.includes(l.id))) {
+                mod.folders.forEach((f) => {
+                    if (f.lessons?.some((l: CourseLesson) => initialSelectedIds.includes(l.id))) {
                         hasSelection = true;
                     }
                 });
@@ -102,9 +103,9 @@ export function LinkLessonModal({ isOpen, onClose, courseId, onSave, initialSele
     const selectedLessons: LinkedLesson[] = [];
     
     // Varre a estrutura para reconstruir os objetos LinkedLesson baseados nos IDs selecionados
-    structure.forEach((mod: any) => {
+    structure.forEach((mod: CourseStructureModule) => {
         // 1. Aulas Soltas
-        mod.looseLessons?.forEach((lesson: any) => {
+        mod.looseLessons?.forEach((lesson: CourseLesson) => {
             if (selectedIds.has(lesson.id)) {
                 selectedLessons.push({
                     id: lesson.id,
@@ -115,8 +116,8 @@ export function LinkLessonModal({ isOpen, onClose, courseId, onSave, initialSele
         });
 
         // 2. Aulas em Pastas
-        mod.folders?.forEach((folder: any) => {
-            folder.lessons?.forEach((lesson: any) => {
+        mod.folders?.forEach((folder) => {
+            folder.lessons?.forEach((lesson: CourseLesson) => {
                 if (selectedIds.has(lesson.id)) {
                     selectedLessons.push({
                         id: lesson.id,
@@ -156,14 +157,14 @@ export function LinkLessonModal({ isOpen, onClose, courseId, onSave, initialSele
             ) : structure.length === 0 ? (
                 <div className="text-center py-10 text-zinc-600 font-bold uppercase text-xs">Nenhuma aula encontrada no curso.</div>
             ) : (
-                structure.map((mod: any) => {
+                structure.map((mod: CourseStructureModule) => {
                     const isExpanded = expandedModules[mod.id];
                     
                     // Contagem de selecionados neste módulo
                     let moduleSelectedCount = 0;
-                    mod.looseLessons?.forEach((l: any) => { if(selectedIds.has(l.id)) moduleSelectedCount++; });
-                    mod.folders?.forEach((f: any) => {
-                        f.lessons?.forEach((l: any) => { if(selectedIds.has(l.id)) moduleSelectedCount++; });
+                    mod.looseLessons?.forEach((l: CourseLesson) => { if(selectedIds.has(l.id)) moduleSelectedCount++; });
+                    mod.folders?.forEach((f) => {
+                        f.lessons?.forEach((l: CourseLesson) => { if(selectedIds.has(l.id)) moduleSelectedCount++; });
                     });
 
                     return (
@@ -189,7 +190,7 @@ export function LinkLessonModal({ isOpen, onClose, courseId, onSave, initialSele
                                 <div className="p-3 space-y-3 bg-black/20">
                                     
                                     {/* 1. Pastas (Submódulos) */}
-                                    {mod.folders?.map((folder: any) => (
+                                    {mod.folders?.map((folder) => (
                                         <div key={folder.id} className="ml-2 border-l-2 border-zinc-800 pl-3">
                                             <div className="flex items-center gap-2 mb-2 text-zinc-500">
                                                 <Folder size={12} />
@@ -198,7 +199,7 @@ export function LinkLessonModal({ isOpen, onClose, courseId, onSave, initialSele
                                             
                                             <div className="pl-1">
                                                 {folder.lessons?.length === 0 && <span className="text-[10px] text-zinc-600 italic">Pasta vazia</span>}
-                                                {folder.lessons?.map((lesson: any) => (
+                                                {folder.lessons?.map((lesson: CourseLesson) => (
                                                     <LessonRow 
                                                         key={lesson.id} 
                                                         lesson={lesson} 
@@ -214,7 +215,7 @@ export function LinkLessonModal({ isOpen, onClose, courseId, onSave, initialSele
                                     {mod.looseLessons?.length > 0 && (
                                         <div className="mt-2">
                                             {mod.folders?.length > 0 && <div className="text-[9px] font-bold text-zinc-600 uppercase tracking-wider mb-2 ml-1">Aulas Avulsas</div>}
-                                            {mod.looseLessons.map((lesson: any) => (
+                                            {mod.looseLessons.map((lesson: CourseLesson) => (
                                                 <LessonRow 
                                                     key={lesson.id} 
                                                     lesson={lesson} 

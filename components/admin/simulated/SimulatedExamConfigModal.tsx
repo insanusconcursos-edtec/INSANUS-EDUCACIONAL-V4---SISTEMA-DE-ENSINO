@@ -28,6 +28,7 @@ const SimulatedExamConfigModal: React.FC<SimulatedExamConfigModalProps> = ({
   
   // Basic Data
   const [title, setTitle] = useState('');
+  const [publishDate, setPublishDate] = useState<string>('');
   const [type, setType] = useState<ExamType>('multiple_choice');
   const [alternativesCount, setAlternativesCount] = useState<number>(5);
   const [questionCount, setQuestionCount] = useState<number>(0);
@@ -56,6 +57,7 @@ const SimulatedExamConfigModal: React.FC<SimulatedExamConfigModalProps> = ({
     if (isOpen) {
       if (examToEdit) {
         setTitle(examToEdit.title);
+        setPublishDate(examToEdit.publishDate || '');
         setType(examToEdit.type);
         setAlternativesCount(examToEdit.alternativesCount || 5);
         setQuestionCount(examToEdit.questionCount);
@@ -82,6 +84,7 @@ const SimulatedExamConfigModal: React.FC<SimulatedExamConfigModalProps> = ({
       } else {
         // Reset Defaults
         setTitle('');
+        setPublishDate('');
         setType('multiple_choice');
         setAlternativesCount(5);
         setQuestionCount(60);
@@ -139,6 +142,7 @@ const SimulatedExamConfigModal: React.FC<SimulatedExamConfigModalProps> = ({
     try {
         const examData: any = {
             title,
+            publishDate: publishDate || null,
             type,
             questionCount: Number(questionCount),
             duration: totalDuration,
@@ -224,6 +228,17 @@ const SimulatedExamConfigModal: React.FC<SimulatedExamConfigModalProps> = ({
                             placeholder="EX: SIMULADO 01 - PROVA OBJETIVA"
                             className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-purple-500 uppercase font-bold"
                         />
+                    </div>
+
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-bold text-zinc-400 uppercase">Data de Publicação (Opcional)</label>
+                        <input 
+                            type="datetime-local"
+                            value={publishDate}
+                            onChange={e => setPublishDate(e.target.value)}
+                            className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-purple-500"
+                        />
+                        <p className="text-[9px] text-zinc-500 italic">Deixe vazio para liberar imediatamente.</p>
                     </div>
 
                     <div className="space-y-2">

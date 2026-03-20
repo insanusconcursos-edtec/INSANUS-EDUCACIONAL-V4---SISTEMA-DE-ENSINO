@@ -1,11 +1,11 @@
 
 import React from 'react';
-import { LayoutDashboard, FileText, FileCheck, Settings } from 'lucide-react';
+import { Settings } from 'lucide-react';
 import StudentCalendarComponent from './StudentCalendar'; 
 import EditalVerticalizadoComponent from './EditalVerticalizado'; 
 import StudentSimulatedComponent from './StudentSimulated'; // Import Real Component
 
-const PagePlaceholder = ({ title, icon: Icon, subtitle }: { title: string, icon: any, subtitle: string }) => (
+const PagePlaceholder = ({ title, icon: Icon, subtitle }: { title: string, icon: React.ElementType, subtitle: string }) => (
   <div className="flex flex-col items-center justify-center min-h-[60vh] text-center gap-6 animate-in fade-in zoom-in-95 duration-500">
     <div className="p-6 rounded-full bg-zinc-900 border border-zinc-800 shadow-[0_0_30px_rgba(0,0,0,0.3)]">
       <Icon size={48} className="text-zinc-600" />

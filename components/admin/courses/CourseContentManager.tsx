@@ -53,7 +53,7 @@ export function CourseContentManager({ course, onBack }: CourseContentManagerPro
         ...data,
         courseId: course.id,
         order: 999 
-      } as any);
+      } as Omit<CourseModule, 'id'>);
     }
     await loadModules();
     setEditingModule(null);

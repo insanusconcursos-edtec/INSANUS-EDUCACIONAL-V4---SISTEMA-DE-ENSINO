@@ -3,9 +3,10 @@ import React, { useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { 
   Plus, Trash2, ChevronRight, ChevronDown, 
-  PlayCircle, FileText, BrainCircuit, Layers, X, Link as LinkIcon,
-  ArrowUp, ArrowDown, StickyNote, Save
+  PlayCircle, FileText, BrainCircuit, Layers, X,
+  ArrowUp, ArrowDown, StickyNote
 } from 'lucide-react';
+import { MindMapNode, Flashcard } from '../../../services/metaService';
 import { CourseEditalTopic, LinkedLesson, MaterialPDF } from '../../../../types/courseEdital';
 import { courseService } from '../../../../services/courseService';
 
@@ -113,11 +114,11 @@ export const AdminCourseEditalTopic: React.FC<Props> = ({
   };
 
   // --- HANDLERS DE CONTEÚDO (IA/LINK/PDF) ---
-  const handleUpdateMindMap = (nodes: any[]) => {
+  const handleUpdateMindMap = (nodes: MindMapNode[]) => {
     onUpdate({ ...topic, contentData: { ...topic.contentData, mindMap: nodes } });
   };
 
-  const handleUpdateFlashcards = (cards: any[]) => {
+  const handleUpdateFlashcards = (cards: Flashcard[]) => {
     onUpdate({ ...topic, contentData: { ...topic.contentData, flashcards: cards } });
   };
 
@@ -145,7 +146,7 @@ export const AdminCourseEditalTopic: React.FC<Props> = ({
               };
               const updatedPdfs = [...(topic.materialPdfs || []), newPdf];
               onUpdate({ ...topic, materialPdfs: updatedPdfs });
-          } catch (error) {
+          } catch (_error) {
               alert("Erro ao fazer upload do PDF.");
           } finally {
               setIsUploading(false);

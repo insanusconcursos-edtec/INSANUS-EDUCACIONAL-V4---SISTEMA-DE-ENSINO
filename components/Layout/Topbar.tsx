@@ -8,10 +8,9 @@ interface TopbarProps {
   navItems: { label: string; path: string }[];
   roleLabel: string;
   dashboardLabel: string;
-  userEmail?: string;
 }
 
-const Topbar: React.FC<TopbarProps> = ({ navItems, roleLabel, dashboardLabel, userEmail }) => {
+const Topbar: React.FC<TopbarProps> = ({ navItems, roleLabel, dashboardLabel }) => {
   const location = useLocation();
   const { logout } = useAuth();
 

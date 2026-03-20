@@ -21,6 +21,7 @@ const SimulatedClassForm: React.FC<SimulatedClassFormProps> = ({
     subcategoryId: '',
     organization: '',
     buyLink: '',
+    presentationVideoUrl: '',
     coverUrl: '' // URL existente
   });
   
@@ -38,6 +39,7 @@ const SimulatedClassForm: React.FC<SimulatedClassFormProps> = ({
           subcategoryId: initialData.subcategoryId,
           organization: initialData.organization,
           buyLink: initialData.buyLink,
+          presentationVideoUrl: initialData.presentationVideoUrl || '',
           coverUrl: initialData.coverUrl
         });
         setPreviewUrl(initialData.coverUrl);
@@ -49,6 +51,7 @@ const SimulatedClassForm: React.FC<SimulatedClassFormProps> = ({
           subcategoryId: '',
           organization: '',
           buyLink: '',
+          presentationVideoUrl: '',
           coverUrl: ''
         });
         setPreviewUrl('');
@@ -204,6 +207,18 @@ const SimulatedClassForm: React.FC<SimulatedClassFormProps> = ({
                 value={formData.buyLink}
                 onChange={handleChange}
                 placeholder="https://..."
+                className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-4 py-3 text-xs text-white placeholder-zinc-700 focus:outline-none focus:border-brand-red"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Vídeo de Apresentação (Panda Video - Opcional)</label>
+            <input 
+                type="url"
+                name="presentationVideoUrl"
+                value={formData.presentationVideoUrl}
+                onChange={handleChange}
+                placeholder="https://player-vz-...tv.pandavideo.com.br/embed/?v=..."
                 className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-4 py-3 text-xs text-white placeholder-zinc-700 focus:outline-none focus:border-brand-red"
             />
           </div>

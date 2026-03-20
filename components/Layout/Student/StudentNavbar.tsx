@@ -31,7 +31,7 @@ const StudentNavbar: React.FC = () => {
             setLifetimeMinutes(data.lifetimeMinutes || 0);
 
             // Current Plan Stats
-            const currentPlanId = (data as any).currentPlanId;
+            const currentPlanId = data.currentPlanId;
             if (currentPlanId && data.planStats && data.planStats[currentPlanId]) {
                 setPlanMinutes(data.planStats[currentPlanId].minutes || 0);
             } else {

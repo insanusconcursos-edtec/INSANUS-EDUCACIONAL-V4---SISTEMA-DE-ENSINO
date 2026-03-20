@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
   GraduationCap, Layers, ChevronRight, FileCheck, AlertCircle, PlayCircle, BarChart2, ArrowLeft, Trophy,
-  Search, Filter, Building2, ListChecks, Check, X, Minus, Medal, User
+  Search, Filter, Building2, ListChecks, Check, X, Minus, Medal, User, Lock
 } from 'lucide-react';
 import { doc, getDoc, collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
 import { db } from '../../services/firebase';
@@ -481,6 +481,7 @@ const StudentSimulated: React.FC = () => {
 
   // Runner State
   const [isRunningExam, setIsRunningExam] = useState(false);
+  const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
 
   // --- ACTIONS ---
 
@@ -605,7 +606,18 @@ const StudentSimulated: React.FC = () => {
                       </button>
                       <div>
                           <h2 className="text-2xl font-black text-white uppercase tracking-tighter">{selectedClass.title}</h2>
-                          <p className="text-zinc-500 text-xs font-bold uppercase tracking-widest">{selectedClass.organization}</p>
+                          <div className="flex items-center gap-3 mt-1">
+                              <p className="text-zinc-500 text-xs font-bold uppercase tracking-widest">{selectedClass.organization}</p>
+                              {selectedClass.presentationVideoUrl && (
+                                  <button 
+                                      onClick={() => setIsVideoModalOpen(true)}
+                                      className="flex items-center gap-1.5 px-3 py-1 bg-zinc-800 hover:bg-zinc-700 text-white rounded-full text-[10px] font-black uppercase tracking-widest transition-all border border-zinc-700"
+                                  >
+                                      <PlayCircle size={12} className="text-brand-red" />
+                                      Vídeo de Apresentação
+                                  </button>
+                              )}
+                          </div>
                       </div>
                   </div>
                   
@@ -639,22 +651,37 @@ const StudentSimulated: React.FC = () => {
                                   const attempt = examAttempts[exam.id!];
                                   const isDone = !!attempt;
                                   
+                                  // Lógica de Agendamento (Data de Publicação)
+                                  const now = new Date();
+                                  const publishDate = exam.publishDate ? new Date(exam.publishDate) : null;
+                                  const isBlocked = publishDate && publishDate > now;
+                                  
                                   return (
-                                      <div key={exam.id} className="bg-zinc-900 border border-zinc-800 p-5 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4 group hover:border-zinc-700 transition-all">
+                                      <div key={exam.id} className={`bg-zinc-900 border border-zinc-800 p-5 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4 group hover:border-zinc-700 transition-all ${isBlocked ? 'opacity-75' : ''}`}>
                                           <div className="flex items-center gap-4">
-                                              <div className={`p-3 rounded-xl ${isDone ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' : 'bg-zinc-800 text-zinc-400'}`}>
-                                                  {isDone ? <Trophy size={24} /> : <FileCheck size={24} />}
+                                              <div className={`p-3 rounded-xl ${isDone ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' : isBlocked ? 'bg-zinc-800 text-zinc-600 border border-zinc-700' : 'bg-zinc-800 text-zinc-400'}`}>
+                                                  {isDone ? <Trophy size={24} /> : isBlocked ? <Lock size={24} /> : <FileCheck size={24} />}
                                               </div>
                                               <div>
                                                   <div className="flex items-center gap-2">
-                                                    <h3 className="text-lg font-black text-white uppercase tracking-tight">{exam.title}</h3>
+                                                    <h3 className={`text-lg font-black uppercase tracking-tight ${isBlocked ? 'text-zinc-500' : 'text-white'}`}>{exam.title}</h3>
                                                     {exam.status === 'draft' && (
                                                         <span className="px-2 py-0.5 rounded bg-yellow-500/10 text-yellow-500 text-[9px] font-bold uppercase border border-yellow-500/20">Rascunho</span>
+                                                    )}
+                                                    {isBlocked && (
+                                                        <span className="px-2 py-0.5 rounded bg-zinc-800 text-zinc-500 text-[9px] font-bold uppercase border border-zinc-700 flex items-center gap-1">
+                                                            <Lock size={10} /> BLOQUEADO
+                                                        </span>
                                                     )}
                                                   </div>
                                                   <div className="flex items-center gap-3 text-[10px] font-bold text-zinc-500 uppercase mt-1">
                                                       <span className="flex items-center gap-1"><Layers size={12} /> {exam.questionCount} Questões</span>
                                                       {exam.hasPenalty && <span className="flex items-center gap-1 text-red-500"><AlertCircle size={12} /> Penalidade Ativa</span>}
+                                                      {isBlocked && publishDate && (
+                                                          <span className="flex items-center gap-1 text-purple-400">
+                                                               Liberação em: {publishDate.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                                                          </span>
+                                                      )}
                                                   </div>
                                               </div>
                                           </div>
@@ -666,6 +693,13 @@ const StudentSimulated: React.FC = () => {
                                                       className="px-6 py-3 bg-zinc-800 hover:bg-zinc-700 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center gap-2"
                                                   >
                                                       <BarChart2 size={14} /> Ver Resultado
+                                                  </button>
+                                              ) : isBlocked ? (
+                                                  <button 
+                                                      disabled
+                                                      className="px-6 py-3 bg-zinc-800 text-zinc-600 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center gap-2 cursor-not-allowed border border-zinc-700"
+                                                  >
+                                                      <Lock size={14} /> Bloqueado
                                                   </button>
                                               ) : (
                                                   <button 
@@ -684,6 +718,32 @@ const StudentSimulated: React.FC = () => {
                   </>
               ) : (
                   <StudentPerformanceDashboard attempts={classAttempts} />
+              )}
+
+              {/* MODAL DE VÍDEO DE APRESENTAÇÃO */}
+              {isVideoModalOpen && selectedClass.presentationVideoUrl && (
+                  <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                      <div className="absolute inset-0 bg-black/90 backdrop-blur-sm" onClick={() => setIsVideoModalOpen(false)}></div>
+                      <div className="relative w-full max-w-4xl bg-zinc-950 border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+                          <div className="p-4 border-b border-zinc-900 flex items-center justify-between bg-zinc-900/50">
+                              <h3 className="text-xs font-black text-white uppercase tracking-widest flex items-center gap-2">
+                                  <PlayCircle size={16} className="text-brand-red" />
+                                  Vídeo de Apresentação
+                              </h3>
+                              <button onClick={() => setIsVideoModalOpen(false)} className="text-zinc-500 hover:text-white transition-colors">
+                                  <X size={20} />
+                              </button>
+                          </div>
+                          <div className="aspect-video w-full bg-black">
+                              <iframe 
+                                  src={selectedClass.presentationVideoUrl}
+                                  className="w-full h-full"
+                                  allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture" 
+                                  allowFullScreen
+                              />
+                          </div>
+                      </div>
+                  </div>
               )}
           </div>
       );
