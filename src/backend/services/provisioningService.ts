@@ -35,8 +35,20 @@ export const provisionTictoPurchase = async (customerData: any, tictoProductId: 
   try {
     const safeProductId = String(tictoProductId);
     const cpf = customerData.document_number || customerData.cpf || '';
-    const phone = customerData.phone_number || customerData.phone || '';
-    console.log(`Iniciando provisionamento para: ${customerData.email}`);
+    
+    // Extração robusta do telefone (Contato/WhatsApp)
+    const getPhone = (data: any) => {
+      const p = data.phone || data.phone_number || data.cellphone || data.full_phone || 
+                (data.contact && (data.contact.phone || data.contact.phone_number || data.contact.cellphone));
+      if (!p) return '';
+      if (typeof p === 'object') {
+        return `${p.ddi || ''}${p.ddd || ''}${p.number || ''}`.replace(/\D/g, '');
+      }
+      return String(p).replace(/\D/g, '');
+    };
+    const phone = getPhone(customerData);
+
+    console.log(`Iniciando provisionamento para: ${customerData.email} (CPF: ${cpf}, Phone: ${phone})`);
 
     // 1. Procurar na coleção ticto_products qual o produto que possui o tictoId correspondente
     const productsSnapshot = await dbAdmin.collection('ticto_products')
@@ -172,7 +184,8 @@ export const provisionTictoPurchase = async (customerData: any, tictoProductId: 
         name: customerData.name,
         email: customerData.email,
         cpf: cpf,
-        phone: phone,
+        contact: phone,
+        whatsapp: phone,
         role: 'student',
         status: 'active',
         createdAt: FieldValue.serverTimestamp(),
@@ -197,7 +210,8 @@ export const provisionTictoPurchase = async (customerData: any, tictoProductId: 
           name: customerData.name || userRecord.displayName || '',
           email: customerData.email,
           cpf: cpf,
-          phone: phone || userRecord.phoneNumber || '',
+          contact: phone || userRecord.phoneNumber || '',
+          whatsapp: phone || userRecord.phoneNumber || '',
           role: 'student',
           status: 'active',
           createdAt: FieldValue.serverTimestamp(),
@@ -212,9 +226,10 @@ export const provisionTictoPurchase = async (customerData: any, tictoProductId: 
 
         const updateData: any = { status: 'active' };
         
-        // Atualização defensiva de CPF e telefone
+        // Atualização defensiva de CPF e telefone (Contato/WhatsApp)
         if (!userData.cpf && cpf) updateData.cpf = cpf;
-        if (!userData.phone && phone) updateData.phone = phone;
+        if (!userData.whatsapp && phone) updateData.whatsapp = phone;
+        if (!userData.contact && phone) updateData.contact = phone;
 
         // Verifica se já possui o acesso ativo para não duplicar
         const hasActiveAccess = currentAccess.some((acc: any) => 
