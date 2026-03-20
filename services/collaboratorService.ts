@@ -25,10 +25,14 @@ const INTERNAL_SUFFIX = "@insanus.internal";
 // === TYPES ===
 
 export interface CollaboratorPermissions {
-  plans: boolean;      // Access to Plans
-  simulated: boolean;  // Access to Simulated Exams
-  students: boolean;   // Access to Students
-  team: boolean;       // Access to Team Management
+  planos: boolean;      // Access to Plans
+  simulados: boolean;  // Access to Simulated Exams
+  alunos: boolean;     // Access to Students
+  equipe: boolean;       // Access to Team Management
+  produtos: boolean;
+  cursos_online: boolean;
+  turmas_presenciais: boolean;
+  eventos_ao_vivo: boolean;
 }
 
 export interface Collaborator {

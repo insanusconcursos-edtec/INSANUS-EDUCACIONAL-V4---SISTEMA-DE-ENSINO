@@ -2,11 +2,13 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { 
   Plus, Search, Trash2, Shield, Users, Layers, GraduationCap, 
-  CheckCircle2, XCircle, User, Lock, Key, Loader2 
+  CheckCircle2, XCircle, User, Lock, Key, Loader2, Pencil,
+  Package, Monitor, MapPin, Radio
 } from 'lucide-react';
 import { 
   getCollaborators, 
   createCollaborator, 
+  updateCollaborator,
   deleteCollaborator, 
   Collaborator, 
   CreateCollaboratorData,
@@ -60,41 +62,70 @@ const PermissionToggle = ({
   </div>
 );
 
-// 2. Creation Modal
+// 2. Creation/Edition Modal
 const CreateCollaboratorModal = ({ 
   isOpen, 
   onClose, 
-  onSave 
+  onSave,
+  editingCollaborator = null
 }: { 
   isOpen: boolean; 
   onClose: () => void; 
-  onSave: (data: CreateCollaboratorData) => Promise<void>; 
+  onSave: (data: any) => Promise<void>; 
+  editingCollaborator?: Collaborator | null;
 }) => {
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [permissions, setPermissions] = useState<CollaboratorPermissions>({
-    plans: false,
-    simulated: false,
-    students: false,
-    team: false
+    planos: false,
+    simulados: false,
+    alunos: false,
+    equipe: false,
+    produtos: false,
+    cursos_online: false,
+    turmas_presenciais: false,
+    eventos_ao_vivo: false
   });
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (editingCollaborator) {
+      setName(editingCollaborator.name);
+      setUsername(editingCollaborator.username);
+      setPassword(''); // Don't show password
+      setPermissions(editingCollaborator.permissions);
+    } else {
+      setName('');
+      setUsername('');
+      setPassword('');
+      setPermissions({
+        planos: false,
+        simulados: false,
+        alunos: false,
+        equipe: false,
+        produtos: false,
+        cursos_online: false,
+        turmas_presenciais: false,
+        eventos_ao_vivo: false
+      });
+    }
+  }, [editingCollaborator, isOpen]);
 
   if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !username || !password) return alert("Preencha todos os campos.");
-    if (password.length < 6) return alert("A senha deve ter no mínimo 6 caracteres.");
+    if (!name || !username || (!editingCollaborator && !password)) return alert("Preencha todos os campos.");
+    if (!editingCollaborator && password.length < 6) return alert("A senha deve ter no mínimo 6 caracteres.");
 
     setLoading(true);
     try {
-      await onSave({ name, username, password, permissions });
+      const data: any = { name, username, permissions };
+      if (password) data.password = password;
+      
+      await onSave(data);
       onClose();
-      // Reset form
-      setName(''); setUsername(''); setPassword('');
-      setPermissions({ plans: false, simulated: false, students: false, team: false });
     } catch (error: any) {
       alert(error.message);
     } finally {
@@ -110,7 +141,9 @@ const CreateCollaboratorModal = ({
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="w-full max-w-lg bg-zinc-950 border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
         <div className="p-6 border-b border-zinc-900 bg-zinc-900/50 flex justify-between items-center">
-          <h2 className="text-xl font-black text-white uppercase tracking-tighter">Novo Colaborador</h2>
+          <h2 className="text-xl font-black text-white uppercase tracking-tighter">
+            {editingCollaborator ? 'Editar Colaborador' : 'Novo Colaborador'}
+          </h2>
           <button onClick={onClose} className="text-zinc-500 hover:text-white"><XCircle size={20} /></button>
         </div>
 
@@ -141,13 +174,16 @@ const CreateCollaboratorModal = ({
                   <input 
                     value={username}
                     onChange={e => setUsername(e.target.value.toLowerCase().replace(/\s/g, ''))}
+                    disabled={!!editingCollaborator}
                     placeholder="joao.silva"
-                    className="w-full bg-zinc-900 border border-zinc-800 rounded-xl py-2.5 pl-9 pr-4 text-xs text-white placeholder-zinc-700 focus:border-brand-red focus:outline-none"
+                    className="w-full bg-zinc-900 border border-zinc-800 rounded-xl py-2.5 pl-9 pr-4 text-xs text-white placeholder-zinc-700 focus:border-brand-red focus:outline-none disabled:opacity-50"
                   />
                 </div>
               </div>
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-zinc-400 uppercase">Senha Inicial</label>
+                <label className="text-[10px] font-bold text-zinc-400 uppercase">
+                  {editingCollaborator ? 'Nova Senha (opcional)' : 'Senha Inicial'}
+                </label>
                 <div className="relative">
                   <Lock size={14} className="absolute left-3 top-3 text-zinc-600" />
                   <input 
@@ -170,30 +206,58 @@ const CreateCollaboratorModal = ({
               <PermissionToggle 
                 label="Gestão de Planos" 
                 icon={Layers} 
-                checked={permissions.plans} 
-                onChange={() => togglePerm('plans')} 
+                checked={permissions.planos} 
+                onChange={() => togglePerm('planos')} 
                 colorClass="blue-500" 
               />
               <PermissionToggle 
                 label="Gestão de Alunos" 
                 icon={Users} 
-                checked={permissions.students} 
-                onChange={() => togglePerm('students')} 
+                checked={permissions.alunos} 
+                onChange={() => togglePerm('alunos')} 
                 colorClass="emerald-500" 
               />
               <PermissionToggle 
                 label="Gestão de Simulados" 
                 icon={GraduationCap} 
-                checked={permissions.simulated} 
-                onChange={() => togglePerm('simulated')} 
+                checked={permissions.simulados} 
+                onChange={() => togglePerm('simulados')} 
                 colorClass="orange-500" 
               />
               <PermissionToggle 
                 label="Gestão de Equipe" 
                 icon={Shield} 
-                checked={permissions.team} 
-                onChange={() => togglePerm('team')} 
+                checked={permissions.equipe} 
+                onChange={() => togglePerm('equipe')} 
                 colorClass="purple-500" 
+              />
+              <PermissionToggle 
+                label="Gestão de Produtos" 
+                icon={Package} 
+                checked={permissions.produtos} 
+                onChange={() => togglePerm('produtos')} 
+                colorClass="pink-500" 
+              />
+              <PermissionToggle 
+                label="Cursos Online" 
+                icon={Monitor} 
+                checked={permissions.cursos_online} 
+                onChange={() => togglePerm('cursos_online')} 
+                colorClass="cyan-500" 
+              />
+              <PermissionToggle 
+                label="Turmas Presenciais" 
+                icon={MapPin} 
+                checked={permissions.turmas_presenciais} 
+                onChange={() => togglePerm('turmas_presenciais')} 
+                colorClass="yellow-500" 
+              />
+              <PermissionToggle 
+                label="Eventos ao Vivo" 
+                icon={Radio} 
+                checked={permissions.eventos_ao_vivo} 
+                onChange={() => togglePerm('eventos_ao_vivo')} 
+                colorClass="red-500" 
               />
             </div>
           </div>
@@ -205,7 +269,7 @@ const CreateCollaboratorModal = ({
               className="w-full bg-brand-red hover:bg-red-600 text-white font-black py-4 rounded-xl text-xs uppercase tracking-widest shadow-lg shadow-red-900/20 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
             >
               {loading ? <Loader2 className="animate-spin" /> : <CheckCircle2 size={16} />}
-              Criar Colaborador
+              {editingCollaborator ? 'Salvar Alterações' : 'Criar Colaborador'}
             </button>
           </div>
 
@@ -221,6 +285,7 @@ const TeamManager: React.FC = () => {
   const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingCollaborator, setEditingCollaborator] = useState<Collaborator | null>(null);
   
   // Delete State
   const [collabToDelete, setCollabToDelete] = useState<Collaborator | null>(null);
@@ -241,9 +306,24 @@ const TeamManager: React.FC = () => {
     fetchData();
   }, [fetchData]);
 
-  const handleCreate = async (data: CreateCollaboratorData) => {
-    await createCollaborator(data);
+  const handleSave = async (data: any) => {
+    if (editingCollaborator) {
+      await updateCollaborator(editingCollaborator.uid, data);
+    } else {
+      await createCollaborator(data as CreateCollaboratorData);
+    }
     await fetchData();
+    setEditingCollaborator(null);
+  };
+
+  const handleOpenEdit = (collab: Collaborator) => {
+    setEditingCollaborator(collab);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setEditingCollaborator(null);
   };
 
   const handleDelete = async () => {
@@ -308,21 +388,34 @@ const TeamManager: React.FC = () => {
                       </div>
                    </div>
                    
-                   <button 
-                     onClick={() => setCollabToDelete(collab)}
-                     className="p-2 text-zinc-600 hover:text-red-500 hover:bg-red-900/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
-                     title="Excluir"
-                   >
-                     <Trash2 size={16} />
-                   </button>
+                   <div className="flex items-center gap-2">
+                      <button 
+                        onClick={() => handleOpenEdit(collab)}
+                        className="p-2 text-zinc-600 hover:text-brand-red hover:bg-brand-red/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                        title="Editar"
+                      >
+                        <Pencil size={16} />
+                      </button>
+                      <button 
+                        onClick={() => setCollabToDelete(collab)}
+                        className="p-2 text-zinc-600 hover:text-red-500 hover:bg-red-900/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                        title="Excluir"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                   </div>
                 </div>
 
                 {/* Permissions Grid */}
-                <div className="bg-zinc-900/50 rounded-xl p-3 border border-zinc-800/50 grid grid-cols-2 gap-2">
-                   <PermissionBadge label="PLANOS" active={collab.permissions.plans} color="text-blue-500" />
-                   <PermissionBadge label="ALUNOS" active={collab.permissions.students} color="text-emerald-500" />
-                   <PermissionBadge label="SIMULADOS" active={collab.permissions.simulated} color="text-orange-500" />
-                   <PermissionBadge label="EQUIPE" active={collab.permissions.team} color="text-purple-500" />
+                <div className="bg-zinc-900/50 rounded-xl p-3 border border-zinc-800/50 grid grid-cols-2 gap-y-3 gap-x-2">
+                   <PermissionBadge label="PLANOS" active={collab.permissions.planos} color="text-blue-500" />
+                   <PermissionBadge label="ALUNOS" active={collab.permissions.alunos} color="text-emerald-500" />
+                   <PermissionBadge label="SIMULADOS" active={collab.permissions.simulados} color="text-orange-500" />
+                   <PermissionBadge label="EQUIPE" active={collab.permissions.equipe} color="text-purple-500" />
+                   <PermissionBadge label="PRODUTOS" active={collab.permissions.produtos} color="text-pink-500" />
+                   <PermissionBadge label="CURSOS" active={collab.permissions.cursos_online} color="text-cyan-500" />
+                   <PermissionBadge label="PRESENCIAL" active={collab.permissions.turmas_presenciais} color="text-yellow-500" />
+                   <PermissionBadge label="EVENTOS" active={collab.permissions.eventos_ao_vivo} color="text-red-500" />
                 </div>
 
              </div>
@@ -332,8 +425,9 @@ const TeamManager: React.FC = () => {
 
       <CreateCollaboratorModal 
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onSave={handleCreate}
+        onClose={handleCloseModal}
+        onSave={handleSave}
+        editingCollaborator={editingCollaborator}
       />
 
       <ConfirmationModal 

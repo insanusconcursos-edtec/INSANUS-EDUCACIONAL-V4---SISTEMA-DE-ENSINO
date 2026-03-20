@@ -28,10 +28,10 @@ const LoginPage: React.FC = () => {
     if (userData.role === 'collaborator') {
         const perms = userData.permissions || {};
         
-        if (perms.plans) return '/admin/planos';
-        if (perms.simulated) return '/admin/simulados';
-        if (perms.students) return '/admin/alunos';
-        if (perms.team) return '/admin/equipe';
+        if (perms.planos) return '/admin/planos';
+        if (perms.simulados) return '/admin/simulados';
+        if (perms.alunos) return '/admin/alunos';
+        if (perms.equipe) return '/admin/equipe';
         
         // Se não tiver nenhuma permissão explícita, mas logou
         return '/admin/planos'; // Ou uma página de "Sem Acesso"

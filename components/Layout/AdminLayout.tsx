@@ -13,43 +13,42 @@ const AdminLayout: React.FC = () => {
     const isAdmin = userRole === 'ADMIN';
 
     // 1. PLANOS
-    if (isAdmin || perms.plans) {
+    if (isAdmin || perms.planos) {
         items.push({ label: 'PLANOS', path: '/admin/planos' });
     }
 
     // 1.5 PRODUTOS (Integração Ticto)
-    if (isAdmin) {
+    if (isAdmin || perms.produtos) {
         items.push({ label: 'PRODUTOS', path: '/admin/products' });
     }
 
     // 2. CURSOS ONLINE (Novo)
-    // Disponível para admin. Futuramente pode-se adicionar permissão específica 'courses'.
-    if (isAdmin) {
+    if (isAdmin || perms.cursos_online) {
         items.push({ label: 'CURSOS ONLINE', path: '/admin/cursos' });
     }
 
     // 3. TURMAS PRESENCIAIS (Novo)
-    if (isAdmin) {
+    if (isAdmin || perms.turmas_presenciais) {
         items.push({ label: 'TURMAS PRESENCIAIS', path: '/admin/presencial' });
     }
 
     // 4. SIMULADOS
-    if (isAdmin || perms.simulated) {
+    if (isAdmin || perms.simulados) {
         items.push({ label: 'SIMULADOS', path: '/admin/simulados' });
     }
 
     // 4.1 EVENTOS AO VIVO
-    if (isAdmin) {
+    if (isAdmin || perms.eventos_ao_vivo) {
         items.push({ label: 'EVENTOS AO VIVO', path: '/admin/eventos-ao-vivo' });
     }
 
     // 5. EQUIPE
-    if (isAdmin || perms.team) {
+    if (isAdmin || perms.equipe) {
         items.push({ label: 'EQUIPE', path: '/admin/equipe' });
     }
 
     // 6. ALUNOS
-    if (isAdmin || perms.students) {
+    if (isAdmin || perms.alunos) {
         items.push({ label: 'ALUNOS', path: '/admin/alunos' });
     }
 
