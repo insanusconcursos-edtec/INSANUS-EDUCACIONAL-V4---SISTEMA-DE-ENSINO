@@ -34,6 +34,8 @@ export const provisionTictoPurchase = async (customerData: any, tictoProductId: 
   const { dbAdmin, authAdmin } = getAdminConfig();
   try {
     const safeProductId = String(tictoProductId);
+    const cpf = customerData.document_number || customerData.cpf || '';
+    const phone = customerData.phone_number || customerData.phone || '';
     console.log(`Iniciando provisionamento para: ${customerData.email}`);
 
     // 1. Procurar na coleção ticto_products qual o produto que possui o tictoId correspondente
@@ -169,7 +171,8 @@ export const provisionTictoPurchase = async (customerData: any, tictoProductId: 
         uid: userRecord.uid,
         name: customerData.name,
         email: customerData.email,
-        phone: customerData.phone || '',
+        cpf: cpf,
+        phone: phone,
         role: 'student',
         status: 'active',
         createdAt: FieldValue.serverTimestamp(),
@@ -193,7 +196,8 @@ export const provisionTictoPurchase = async (customerData: any, tictoProductId: 
         const newUserDoc = {
           name: customerData.name || userRecord.displayName || '',
           email: customerData.email,
-          phone: customerData.phone || userRecord.phoneNumber || '',
+          cpf: cpf,
+          phone: phone || userRecord.phoneNumber || '',
           role: 'student',
           status: 'active',
           createdAt: FieldValue.serverTimestamp(),
@@ -206,6 +210,12 @@ export const provisionTictoPurchase = async (customerData: any, tictoProductId: 
         const userData = userDoc.data() || {};
         const currentAccess = userData.access || [];
 
+        const updateData: any = { status: 'active' };
+        
+        // Atualização defensiva de CPF e telefone
+        if (!userData.cpf && cpf) updateData.cpf = cpf;
+        if (!userData.phone && phone) updateData.phone = phone;
+
         // Verifica se já possui o acesso ativo para não duplicar
         const hasActiveAccess = currentAccess.some((acc: any) => 
           acc.tictoId === safeProductId && 
@@ -214,14 +224,12 @@ export const provisionTictoPurchase = async (customerData: any, tictoProductId: 
         );
 
         if (!hasActiveAccess) {
-          await userRef.update({
-            status: 'active',
-            access: FieldValue.arrayUnion(...accessesToGrant),
-            products: FieldValue.arrayUnion(...accessesToGrant.filter(a => a.type === 'product'))
-          });
+          updateData.access = FieldValue.arrayUnion(...accessesToGrant);
+          updateData.products = FieldValue.arrayUnion(...accessesToGrant.filter(a => a.type === 'product'));
+          await userRef.update(updateData);
           console.log(`[PROVISIONAMENTO] Novos acessos adicionados para o usuário existente ${customerData.email}`);
         } else {
-          await userRef.update({ status: 'active' });
+          await userRef.update(updateData);
           console.log(`[PROVISIONAMENTO] Usuário ${customerData.email} já possui acesso ativo ao produto ${safeProductId}`);
         }
       }
