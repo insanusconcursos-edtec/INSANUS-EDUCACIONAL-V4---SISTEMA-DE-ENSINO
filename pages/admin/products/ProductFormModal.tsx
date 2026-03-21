@@ -221,36 +221,60 @@ export default function ProductFormModal({ product, onClose, onSave }: ProductFo
                 {/* Plans */}
                 <div className="border border-gray-800 rounded-lg bg-gray-900/50 overflow-hidden mb-3">
                   <button type="button" onClick={() => setExpanded(prev => ({ ...prev, plans: !prev.plans }))} className="w-full flex items-center justify-between p-3 bg-gray-900 hover:bg-gray-800 transition text-sm font-bold text-gray-300">
-                    <span>Planos de Estudo ({availablePlans.length})</span>
+                    <span>Planos de Estudo ({linkedPlans.length})</span>
                     {expanded.plans ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                   </button>
                   {expanded.plans && (
                     <div className="p-3 flex flex-col gap-3 border-t border-gray-800">
                       <div className="relative">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={14} />
-                        <input 
-                          type="text" 
-                          placeholder="Pesquisar plano..." 
-                          value={searchTerms.plans}
-                          onChange={(e) => setSearchTerms(prev => ({ ...prev, plans: e.target.value.toLowerCase() }))}
-                          className="w-full bg-gray-950 border border-gray-800 rounded pl-8 pr-3 py-1.5 text-white text-xs focus:border-red-500 outline-none"
-                        />
+                        <select
+                          className="w-full bg-gray-950 border border-gray-800 rounded pl-8 pr-3 py-1.5 text-white text-xs focus:border-red-500 outline-none appearance-none cursor-pointer"
+                          onChange={(e) => {
+                            const id = e.target.value;
+                            if (id && !linkedPlans.includes(id)) {
+                              setLinkedPlans([...linkedPlans, id]);
+                            }
+                            e.target.value = "";
+                          }}
+                          value=""
+                        >
+                          <option value="">Adicionar plano...</option>
+                          {availablePlans
+                            .filter(p => !linkedPlans.includes(p.id))
+                            .filter(p => (p.title || p.name || '').toLowerCase().includes(searchTerms.plans))
+                            .map(plan => (
+                              <option key={plan.id} value={plan.id}>
+                                {plan.title || plan.name || 'Plano sem nome'}
+                              </option>
+                            ))}
+                        </select>
                       </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-60 overflow-y-auto">
-                        {availablePlans.filter(p => (p.title || p.name || '').toLowerCase().includes(searchTerms.plans)).map(plan => (
-                          <label key={plan.id} className="flex items-center gap-2 text-sm text-gray-400 cursor-pointer">
-                            <input 
-                              type="checkbox" 
-                              checked={linkedPlans.includes(plan.id)}
-                              onChange={(e) => {
-                                if (e.target.checked) setLinkedPlans([...linkedPlans, plan.id]);
-                                else setLinkedPlans(linkedPlans.filter(id => id !== plan.id));
-                              }}
-                              className="rounded border-gray-600 bg-gray-900 text-red-500 focus:ring-red-500" 
-                            />
-                            <span className="truncate">{plan.title || plan.name || 'Plano sem nome'}</span>
-                          </label>
-                        ))}
+
+                      <div className="space-y-2">
+                        {linkedPlans.map((id, index) => {
+                          const plan = availablePlans.find(p => p.id === id);
+                          return (
+                            <div key={id} className="flex items-center justify-between bg-gray-950 p-2 rounded border border-gray-800 group">
+                              <div className="flex items-center gap-3">
+                                <span className="text-[10px] font-bold text-zinc-600 w-4">{index + 1}.</span>
+                                <span className="text-xs text-gray-300 truncate">
+                                  {plan?.title || plan?.name || 'Plano removido'}
+                                </span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => setLinkedPlans(linkedPlans.filter(lId => lId !== id))}
+                                className="p-1 hover:bg-red-500/10 text-zinc-500 hover:text-red-500 rounded transition-colors"
+                              >
+                                <X size={14} />
+                              </button>
+                            </div>
+                          );
+                        })}
+                        {linkedPlans.length === 0 && (
+                          <p className="text-center py-4 text-zinc-600 text-[10px] uppercase font-bold">Nenhum plano selecionado</p>
+                        )}
                       </div>
                     </div>
                   )}
@@ -259,36 +283,60 @@ export default function ProductFormModal({ product, onClose, onSave }: ProductFo
                 {/* Online Courses */}
                 <div className="border border-gray-800 rounded-lg bg-gray-900/50 overflow-hidden mb-3">
                   <button type="button" onClick={() => setExpanded(prev => ({ ...prev, courses: !prev.courses }))} className="w-full flex items-center justify-between p-3 bg-gray-900 hover:bg-gray-800 transition text-sm font-bold text-gray-300">
-                    <span>Cursos Online ({availableCourses.length})</span>
+                    <span>Cursos Online ({linkedCourses.length})</span>
                     {expanded.courses ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                   </button>
                   {expanded.courses && (
                     <div className="p-3 flex flex-col gap-3 border-t border-gray-800">
                       <div className="relative">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={14} />
-                        <input 
-                          type="text" 
-                          placeholder="Pesquisar curso..." 
-                          value={searchTerms.courses}
-                          onChange={(e) => setSearchTerms(prev => ({ ...prev, courses: e.target.value.toLowerCase() }))}
-                          className="w-full bg-gray-950 border border-gray-800 rounded pl-8 pr-3 py-1.5 text-white text-xs focus:border-red-500 outline-none"
-                        />
+                        <select
+                          className="w-full bg-gray-950 border border-gray-800 rounded pl-8 pr-3 py-1.5 text-white text-xs focus:border-red-500 outline-none appearance-none cursor-pointer"
+                          onChange={(e) => {
+                            const id = e.target.value;
+                            if (id && !linkedCourses.includes(id)) {
+                              setLinkedCourses([...linkedCourses, id]);
+                            }
+                            e.target.value = "";
+                          }}
+                          value=""
+                        >
+                          <option value="">Adicionar curso...</option>
+                          {availableCourses
+                            .filter(c => !linkedCourses.includes(c.id))
+                            .filter(c => (c.title || c.name || '').toLowerCase().includes(searchTerms.courses))
+                            .map(course => (
+                              <option key={course.id} value={course.id}>
+                                {course.title || course.name || 'Curso sem nome'}
+                              </option>
+                            ))}
+                        </select>
                       </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-60 overflow-y-auto">
-                        {availableCourses.filter(p => (p.title || p.name || '').toLowerCase().includes(searchTerms.courses)).map(course => (
-                          <label key={course.id} className="flex items-center gap-2 text-sm text-gray-400 cursor-pointer">
-                            <input 
-                              type="checkbox" 
-                              checked={linkedCourses.includes(course.id)}
-                              onChange={(e) => {
-                                if (e.target.checked) setLinkedCourses([...linkedCourses, course.id]);
-                                else setLinkedCourses(linkedCourses.filter(id => id !== course.id));
-                              }}
-                              className="rounded border-gray-600 bg-gray-900 text-red-500 focus:ring-red-500" 
-                            />
-                            <span className="truncate">{course.title || course.name || 'Curso sem nome'}</span>
-                          </label>
-                        ))}
+
+                      <div className="space-y-2">
+                        {linkedCourses.map((id, index) => {
+                          const course = availableCourses.find(c => c.id === id);
+                          return (
+                            <div key={id} className="flex items-center justify-between bg-gray-950 p-2 rounded border border-gray-800 group">
+                              <div className="flex items-center gap-3">
+                                <span className="text-[10px] font-bold text-zinc-600 w-4">{index + 1}.</span>
+                                <span className="text-xs text-gray-300 truncate">
+                                  {course?.title || course?.name || 'Curso removido'}
+                                </span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => setLinkedCourses(linkedCourses.filter(lId => lId !== id))}
+                                className="p-1 hover:bg-red-500/10 text-zinc-500 hover:text-red-500 rounded transition-colors"
+                              >
+                                <X size={14} />
+                              </button>
+                            </div>
+                          );
+                        })}
+                        {linkedCourses.length === 0 && (
+                          <p className="text-center py-4 text-zinc-600 text-[10px] uppercase font-bold">Nenhum curso selecionado</p>
+                        )}
                       </div>
                     </div>
                   )}
@@ -297,36 +345,60 @@ export default function ProductFormModal({ product, onClose, onSave }: ProductFo
                 {/* Presential Classes */}
                 <div className="border border-gray-800 rounded-lg bg-gray-900/50 overflow-hidden mb-3">
                   <button type="button" onClick={() => setExpanded(prev => ({ ...prev, classes: !prev.classes }))} className="w-full flex items-center justify-between p-3 bg-gray-900 hover:bg-gray-800 transition text-sm font-bold text-gray-300">
-                    <span>Turmas Presenciais ({availableClasses.length})</span>
+                    <span>Turmas Presenciais ({linkedClasses.length})</span>
                     {expanded.classes ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                   </button>
                   {expanded.classes && (
                     <div className="p-3 flex flex-col gap-3 border-t border-gray-800">
                       <div className="relative">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={14} />
-                        <input 
-                          type="text" 
-                          placeholder="Pesquisar turma..." 
-                          value={searchTerms.classes}
-                          onChange={(e) => setSearchTerms(prev => ({ ...prev, classes: e.target.value.toLowerCase() }))}
-                          className="w-full bg-gray-950 border border-gray-800 rounded pl-8 pr-3 py-1.5 text-white text-xs focus:border-red-500 outline-none"
-                        />
+                        <select
+                          className="w-full bg-gray-950 border border-gray-800 rounded pl-8 pr-3 py-1.5 text-white text-xs focus:border-red-500 outline-none appearance-none cursor-pointer"
+                          onChange={(e) => {
+                            const id = e.target.value;
+                            if (id && !linkedClasses.includes(id)) {
+                              setLinkedClasses([...linkedClasses, id]);
+                            }
+                            e.target.value = "";
+                          }}
+                          value=""
+                        >
+                          <option value="">Adicionar turma...</option>
+                          {availableClasses
+                            .filter(c => !linkedClasses.includes(c.id))
+                            .filter(c => (c.title || c.name || '').toLowerCase().includes(searchTerms.classes))
+                            .map(cls => (
+                              <option key={cls.id} value={cls.id}>
+                                {cls.title || cls.name || 'Turma sem nome'}
+                              </option>
+                            ))}
+                        </select>
                       </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-60 overflow-y-auto">
-                        {availableClasses.filter(p => (p.title || p.name || '').toLowerCase().includes(searchTerms.classes)).map(cls => (
-                          <label key={cls.id} className="flex items-center gap-2 text-sm text-gray-400 cursor-pointer">
-                            <input 
-                              type="checkbox" 
-                              checked={linkedClasses.includes(cls.id)}
-                              onChange={(e) => {
-                                if (e.target.checked) setLinkedClasses([...linkedClasses, cls.id]);
-                                else setLinkedClasses(linkedClasses.filter(id => id !== cls.id));
-                              }}
-                              className="rounded border-gray-600 bg-gray-900 text-red-500 focus:ring-red-500" 
-                            />
-                            <span className="truncate">{cls.title || cls.name || 'Turma sem nome'}</span>
-                          </label>
-                        ))}
+
+                      <div className="space-y-2">
+                        {linkedClasses.map((id, index) => {
+                          const cls = availableClasses.find(c => c.id === id);
+                          return (
+                            <div key={id} className="flex items-center justify-between bg-gray-950 p-2 rounded border border-gray-800 group">
+                              <div className="flex items-center gap-3">
+                                <span className="text-[10px] font-bold text-zinc-600 w-4">{index + 1}.</span>
+                                <span className="text-xs text-gray-300 truncate">
+                                  {cls?.title || cls?.name || 'Turma removida'}
+                                </span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => setLinkedClasses(linkedClasses.filter(lId => lId !== id))}
+                                className="p-1 hover:bg-red-500/10 text-zinc-500 hover:text-red-500 rounded transition-colors"
+                              >
+                                <X size={14} />
+                              </button>
+                            </div>
+                          );
+                        })}
+                        {linkedClasses.length === 0 && (
+                          <p className="text-center py-4 text-zinc-600 text-[10px] uppercase font-bold">Nenhuma turma selecionada</p>
+                        )}
                       </div>
                     </div>
                   )}
@@ -335,36 +407,60 @@ export default function ProductFormModal({ product, onClose, onSave }: ProductFo
                 {/* Simulated Exams */}
                 <div className="border border-gray-800 rounded-lg bg-gray-900/50 overflow-hidden mb-3">
                   <button type="button" onClick={() => setExpanded(prev => ({ ...prev, simulated: !prev.simulated }))} className="w-full flex items-center justify-between p-3 bg-gray-900 hover:bg-gray-800 transition text-sm font-bold text-gray-300">
-                    <span>Turmas de Simulados ({availableSimulated.length})</span>
+                    <span>Turmas de Simulados ({linkedSimulated.length})</span>
                     {expanded.simulated ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                   </button>
                   {expanded.simulated && (
                     <div className="p-3 flex flex-col gap-3 border-t border-gray-800">
                       <div className="relative">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={14} />
-                        <input 
-                          type="text" 
-                          placeholder="Pesquisar simulado..." 
-                          value={searchTerms.simulated}
-                          onChange={(e) => setSearchTerms(prev => ({ ...prev, simulated: e.target.value.toLowerCase() }))}
-                          className="w-full bg-gray-950 border border-gray-800 rounded pl-8 pr-3 py-1.5 text-white text-xs focus:border-red-500 outline-none"
-                        />
+                        <select
+                          className="w-full bg-gray-950 border border-gray-800 rounded pl-8 pr-3 py-1.5 text-white text-xs focus:border-red-500 outline-none appearance-none cursor-pointer"
+                          onChange={(e) => {
+                            const id = e.target.value;
+                            if (id && !linkedSimulated.includes(id)) {
+                              setLinkedSimulated([...linkedSimulated, id]);
+                            }
+                            e.target.value = "";
+                          }}
+                          value=""
+                        >
+                          <option value="">Adicionar simulado...</option>
+                          {availableSimulated
+                            .filter(s => !linkedSimulated.includes(s.id))
+                            .filter(s => (s.title || s.name || '').toLowerCase().includes(searchTerms.simulated))
+                            .map(sim => (
+                              <option key={sim.id} value={sim.id}>
+                                {sim.title || sim.name || 'Simulado sem nome'}
+                              </option>
+                            ))}
+                        </select>
                       </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-60 overflow-y-auto">
-                        {availableSimulated.filter(p => (p.title || p.name || '').toLowerCase().includes(searchTerms.simulated)).map(sim => (
-                          <label key={sim.id} className="flex items-center gap-2 text-sm text-gray-400 cursor-pointer">
-                            <input 
-                              type="checkbox" 
-                              checked={linkedSimulated.includes(sim.id)}
-                              onChange={(e) => {
-                                if (e.target.checked) setLinkedSimulated([...linkedSimulated, sim.id]);
-                                else setLinkedSimulated(linkedSimulated.filter(id => id !== sim.id));
-                              }}
-                              className="rounded border-gray-600 bg-gray-900 text-red-500 focus:ring-red-500" 
-                            />
-                            <span className="truncate">{sim.title || sim.name || 'Simulado sem nome'}</span>
-                          </label>
-                        ))}
+
+                      <div className="space-y-2">
+                        {linkedSimulated.map((id, index) => {
+                          const sim = availableSimulated.find(s => s.id === id);
+                          return (
+                            <div key={id} className="flex items-center justify-between bg-gray-950 p-2 rounded border border-gray-800 group">
+                              <div className="flex items-center gap-3">
+                                <span className="text-[10px] font-bold text-zinc-600 w-4">{index + 1}.</span>
+                                <span className="text-xs text-gray-300 truncate">
+                                  {sim?.title || sim?.name || 'Simulado removido'}
+                                </span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => setLinkedSimulated(linkedSimulated.filter(lId => lId !== id))}
+                                className="p-1 hover:bg-red-500/10 text-zinc-500 hover:text-red-500 rounded transition-colors"
+                              >
+                                <X size={14} />
+                              </button>
+                            </div>
+                          );
+                        })}
+                        {linkedSimulated.length === 0 && (
+                          <p className="text-center py-4 text-zinc-600 text-[10px] uppercase font-bold">Nenhum simulado selecionado</p>
+                        )}
                       </div>
                     </div>
                   )}

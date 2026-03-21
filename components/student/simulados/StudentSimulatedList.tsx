@@ -53,19 +53,25 @@ export const StudentSimulatedList: React.FC<StudentSimulatedListProps> = ({ onSe
                 setCategoryMap(catMap);
 
                 // 3. Filtra por permissão (Lógica Robusta Adaptada ao Schema do Projeto)
-                const allowed = allData.filter(turma => {
-                    // a) Verificação de permissão explícita no array de acessos do usuário
-                    const hasAccess = userData?.access?.some(access => 
-                        access.type === 'simulated_class' && 
-                        access.targetId === turma.id && 
-                        access.isActive
-                    );
-
-                    // b) Verificação de flag pública (caso exista no futuro) ou fallback
-                    const isPublic = (turma as any).public === true;
-
-                    return isPublic || hasAccess;
-                });
+                const allowed = allData
+                    .map(turma => {
+                        const access = userData?.access?.find(a => 
+                            a.type === 'simulated_class' && 
+                            a.targetId === turma.id && 
+                            a.isActive
+                        );
+                        return { 
+                            ...turma, 
+                            grantedAt: access?.createdAt || access?.grantedAt,
+                            hasAccess: !!access || (turma as any).public === true
+                        };
+                    })
+                    .filter(t => t.hasAccess)
+                    .sort((a, b) => {
+                        const dateA = a.grantedAt?.toMillis?.() || new Date(a.grantedAt).getTime() || 0;
+                        const dateB = b.grantedAt?.toMillis?.() || new Date(b.grantedAt).getTime() || 0;
+                        return dateB - dateA;
+                    });
 
                 setClasses(allowed);
 

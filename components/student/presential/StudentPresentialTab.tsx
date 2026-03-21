@@ -39,11 +39,25 @@ export function StudentPresentialTab() {
 
             // LÓGICA CRUCIAL: Filtrar apenas turmas que o usuário tem acesso
             // O user.access contém itens { type: 'presential_class', targetId: '...', isActive: true }
-            const myAccessIds = userData.access
-                .filter((a: any) => a.type === 'presential_class' && a.isActive)
-                .map((a: any) => a.targetId);
+            const myAccess = userData.access
+                .filter((a: any) => a.type === 'presential_class' && a.isActive);
+            
+            const myAccessIds = myAccess.map((a: any) => a.targetId);
 
-            const allowedClasses = allClasses.filter(cls => myAccessIds.includes(cls.id));
+            const allowedClasses = allClasses
+                .filter(cls => myAccessIds.includes(cls.id))
+                .map(cls => {
+                    const access = myAccess.find((a: any) => a.targetId === cls.id);
+                    return { 
+                        ...cls, 
+                        grantedAt: access?.createdAt || access?.grantedAt 
+                    };
+                })
+                .sort((a, b) => {
+                    const dateA = a.grantedAt?.toMillis?.() || new Date(a.grantedAt).getTime() || 0;
+                    const dateB = b.grantedAt?.toMillis?.() || new Date(b.grantedAt).getTime() || 0;
+                    return dateB - dateA;
+                });
 
             setMyClasses(allowedClasses);
             setFilteredClasses(allowedClasses);

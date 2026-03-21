@@ -44,11 +44,25 @@ export function StudentCoursesTab() {
 
             // LÓGICA CRUCIAL: Filtrar apenas cursos que o usuário tem acesso
             // O user.access contém itens { type: 'course', targetId: '...', isActive: true }
-            const myAccessIds = userData.access
-                .filter((a: any) => a.type === 'course' && a.isActive)
-                .map((a: any) => a.targetId);
+            const myAccess = userData.access
+                .filter((a: any) => a.type === 'course' && a.isActive);
+            
+            const myAccessIds = myAccess.map((a: any) => a.targetId);
 
-            const allowedCourses = allCourses.filter(course => myAccessIds.includes(course.id));
+            const allowedCourses = allCourses
+                .filter(course => myAccessIds.includes(course.id))
+                .map(course => {
+                    const access = myAccess.find((a: any) => a.targetId === course.id);
+                    return { 
+                        ...course, 
+                        grantedAt: access?.createdAt || access?.grantedAt 
+                    };
+                })
+                .sort((a, b) => {
+                    const dateA = a.grantedAt?.toMillis?.() || new Date(a.grantedAt).getTime() || 0;
+                    const dateB = b.grantedAt?.toMillis?.() || new Date(b.grantedAt).getTime() || 0;
+                    return dateB - dateA;
+                });
 
             setMyCourses(allowedCourses);
             setFilteredCourses(allowedCourses);
