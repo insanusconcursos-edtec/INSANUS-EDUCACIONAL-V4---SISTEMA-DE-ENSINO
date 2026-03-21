@@ -268,26 +268,42 @@ export const revokeStudentAccess = async (uid: string, accessId: string) => {
   const currentProducts = (student.products || []) as AccessItem[];
 
   const itemToRevoke = currentProducts.find(item => item.id === accessId) || currentAccess.find(item => item.id === accessId);
-  const tictoIdToRevoke = itemToRevoke?.tictoId;
+  if (!itemToRevoke) return;
 
-  const updatedAccess = currentAccess.map(item => {
-    if (item.id === accessId) {
-      return { ...item, isActive: false };
+  const tictoIdToRevoke = itemToRevoke?.tictoId;
+  const idsToRemove = [itemToRevoke.targetId];
+
+  // 1. Identificação de Combos e Busca de Recursos Vinculados (Cascata)
+  if (itemToRevoke.type === 'product') {
+    try {
+      const productSnap = await getDoc(doc(db, 'ticto_products', itemToRevoke.targetId));
+      if (productSnap.exists()) {
+        const productData = productSnap.data();
+        const linked = productData.linkedResources;
+        if (linked) {
+          if (linked.plans) idsToRemove.push(...linked.plans);
+          if (linked.onlineCourses) idsToRemove.push(...linked.onlineCourses);
+          if (linked.presentialClasses) idsToRemove.push(...linked.presentialClasses);
+          if (linked.simulated) idsToRemove.push(...linked.simulated);
+        }
+      }
+    } catch (error) {
+      console.error("Erro ao buscar recursos vinculados do combo:", error);
     }
-    if (tictoIdToRevoke && item.tictoId === tictoIdToRevoke) {
-      return { ...item, isActive: false };
-    }
-    return item;
+  }
+
+  // 2. Filtro em Cascata (O Expurgo)
+  // Removemos todos os itens cujo targetId esteja na lista de remoção ou compartilhe o mesmo tictoId
+  const updatedAccess = currentAccess.filter(item => {
+    if (idsToRemove.includes(item.targetId)) return false;
+    if (tictoIdToRevoke && item.tictoId === tictoIdToRevoke) return false;
+    return true;
   });
 
-  const updatedProducts = currentProducts.map(item => {
-    if (item.id === accessId) {
-      return { ...item, isActive: false };
-    }
-    if (tictoIdToRevoke && item.tictoId === tictoIdToRevoke) {
-      return { ...item, isActive: false };
-    }
-    return item;
+  const updatedProducts = currentProducts.filter(item => {
+    if (idsToRemove.includes(item.targetId)) return false;
+    if (tictoIdToRevoke && item.tictoId === tictoIdToRevoke) return false;
+    return true;
   });
 
   await updateDoc(userRef, { 
