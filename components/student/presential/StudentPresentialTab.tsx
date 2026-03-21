@@ -50,13 +50,14 @@ export function StudentPresentialTab() {
                     const access = myAccess.find((a: any) => a.targetId === cls.id);
                     return { 
                         ...cls, 
-                        grantedAt: access?.createdAt || access?.grantedAt 
+                        grantedAt: access?.createdAt || access?.grantedAt,
+                        orderIndex: access?.orderIndex || 0
                     };
                 })
                 .sort((a, b) => {
                     const dateA = a.grantedAt?.toMillis?.() || new Date(a.grantedAt).getTime() || 0;
                     const dateB = b.grantedAt?.toMillis?.() || new Date(b.grantedAt).getTime() || 0;
-                    return dateB - dateA;
+                    return (dateB - dateA) || (a.orderIndex || 0) - (b.orderIndex || 0);
                 });
 
             setMyClasses(allowedClasses);

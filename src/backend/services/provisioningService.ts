@@ -104,7 +104,8 @@ export const provisionTictoPurchase = async (customerData: any, tictoProductId: 
       if (linkedResources.presentialClasses) linkedResources.presentialClasses.forEach((id: any) => resourcesArray.push({ id, type: 'presential_class' }));
     }
 
-    for (const res of resourcesArray) {
+    for (let index = 0; index < resourcesArray.length; index++) {
+      const res = resourcesArray[index];
       let mappedType = res.type || 'unknown';
       if (mappedType === 'simulated') mappedType = 'simulated_class';
       if (mappedType === 'presential') mappedType = 'presential_class';
@@ -140,7 +141,8 @@ export const provisionTictoPurchase = async (customerData: any, tictoProductId: 
         isActive: true,
         tictoId: safeProductId,
         startDate: Timestamp.now(),
-        endDate: Timestamp.fromDate(expirationDate)
+        endDate: Timestamp.fromDate(expirationDate),
+        orderIndex: index
       });
     }
 

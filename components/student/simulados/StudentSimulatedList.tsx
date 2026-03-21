@@ -63,6 +63,7 @@ export const StudentSimulatedList: React.FC<StudentSimulatedListProps> = ({ onSe
                         return { 
                             ...turma, 
                             grantedAt: access?.createdAt || access?.grantedAt,
+                            orderIndex: access?.orderIndex || 0,
                             hasAccess: !!access || (turma as any).public === true
                         };
                     })
@@ -70,7 +71,7 @@ export const StudentSimulatedList: React.FC<StudentSimulatedListProps> = ({ onSe
                     .sort((a, b) => {
                         const dateA = a.grantedAt?.toMillis?.() || new Date(a.grantedAt).getTime() || 0;
                         const dateB = b.grantedAt?.toMillis?.() || new Date(b.grantedAt).getTime() || 0;
-                        return dateB - dateA;
+                        return (dateB - dateA) || (a.orderIndex || 0) - (b.orderIndex || 0);
                     });
 
                 setClasses(allowed);
