@@ -47,18 +47,20 @@ export function StudentPresentialTab() {
             const allowedClasses = allClasses
                 .filter(cls => myAccessIds.includes(cls.id))
                 .map(cls => {
-                    const access = myAccess.find((a: any) => a.targetId === cls.id);
+                    // Descobre o índice original no array de acessos do aluno para espelhar a ordem de cadastro
+                    const accessIndex = userData.access.findIndex((a: any) => 
+                        a.targetId === cls.id && a.type === 'presential_class' && a.isActive
+                    );
+                    const access = userData.access[accessIndex];
+                    
                     return { 
                         ...cls, 
                         grantedAt: access?.createdAt || access?.grantedAt,
-                        orderIndex: access?.orderIndex || 0
+                        orderIndex: access?.orderIndex || 0,
+                        accessIndex: accessIndex !== -1 ? accessIndex : 999
                     };
                 })
-                .sort((a, b) => {
-                    const dateA = a.grantedAt?.toMillis?.() || new Date(a.grantedAt).getTime() || 0;
-                    const dateB = b.grantedAt?.toMillis?.() || new Date(b.grantedAt).getTime() || 0;
-                    return (dateB - dateA) || (a.orderIndex || 0) - (b.orderIndex || 0);
-                });
+                .sort((a, b) => a.accessIndex - b.accessIndex);
 
             setMyClasses(allowedClasses);
             setFilteredClasses(allowedClasses);

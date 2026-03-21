@@ -55,24 +55,24 @@ export const StudentSimulatedList: React.FC<StudentSimulatedListProps> = ({ onSe
                 // 3. Filtra por permissão (Lógica Robusta Adaptada ao Schema do Projeto)
                 const allowed = allData
                     .map(turma => {
-                        const access = userData?.access?.find(a => 
+                        // Descobre o índice original no array de acessos do aluno para espelhar a ordem de cadastro
+                        const accessIndex = userData?.access?.findIndex(a => 
                             a.type === 'simulated_class' && 
                             a.targetId === turma.id && 
                             a.isActive
                         );
+                        const access = accessIndex !== undefined && accessIndex !== -1 ? userData.access[accessIndex] : null;
+
                         return { 
                             ...turma, 
                             grantedAt: access?.createdAt || access?.grantedAt,
                             orderIndex: access?.orderIndex || 0,
+                            accessIndex: accessIndex !== undefined && accessIndex !== -1 ? accessIndex : 999,
                             hasAccess: !!access || (turma as any).public === true
                         };
                     })
                     .filter(t => t.hasAccess)
-                    .sort((a, b) => {
-                        const dateA = a.grantedAt?.toMillis?.() || new Date(a.grantedAt).getTime() || 0;
-                        const dateB = b.grantedAt?.toMillis?.() || new Date(b.grantedAt).getTime() || 0;
-                        return (dateB - dateA) || (a.orderIndex || 0) - (b.orderIndex || 0);
-                    });
+                    .sort((a, b) => a.accessIndex - b.accessIndex);
 
                 setClasses(allowed);
 
