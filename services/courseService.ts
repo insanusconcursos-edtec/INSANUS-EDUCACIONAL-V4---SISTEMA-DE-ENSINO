@@ -16,6 +16,7 @@ import {
   setDoc,
   serverTimestamp,
   getCountFromServer,
+  deleteField,
   arrayUnion,
   arrayRemove
 } from 'firebase/firestore';
@@ -46,7 +47,7 @@ export const courseService = {
   // Criar novo curso
   createCourse: async (data: CourseFormData, bannerDesktopFile?: File, bannerMobileFile?: File): Promise<string> => {
     try {
-      const finalData: any = { ...data };
+      const finalData: Partial<OnlineCourse> = { ...data };
 
       if (bannerDesktopFile) {
         finalData.bannerUrlDesktop = await courseService.uploadBanner(bannerDesktopFile);
@@ -58,7 +59,7 @@ export const courseService = {
       // =======================================================================
       // LIMPEZA CIRÚRGICA: Remove qualquer campo 'undefined' antes de salvar
       // =======================================================================
-      Object.keys(finalData).forEach(key => {
+      (Object.keys(finalData) as (keyof typeof finalData)[]).forEach(key => {
         if (finalData[key] === undefined) {
           delete finalData[key];
         }
@@ -95,7 +96,7 @@ export const courseService = {
   // Atualizar curso
   updateCourse: async (id: string, data: Partial<CourseFormData>, bannerDesktopFile?: File, bannerMobileFile?: File) => {
     try {
-      const finalData: any = { ...data };
+      const finalData: Partial<OnlineCourse> = { ...data };
 
       if (bannerDesktopFile) {
         finalData.bannerUrlDesktop = await courseService.uploadBanner(bannerDesktopFile);
@@ -107,7 +108,7 @@ export const courseService = {
       // =======================================================================
       // LIMPEZA CIRÚRGICA: Remove qualquer campo 'undefined' antes de salvar
       // =======================================================================
-      Object.keys(finalData).forEach(key => {
+      (Object.keys(finalData) as (keyof typeof finalData)[]).forEach(key => {
         if (finalData[key] === undefined) {
           delete finalData[key];
         }
@@ -138,7 +139,7 @@ export const courseService = {
   duplicateCourse: async (originalCourse: OnlineCourse) => {
     try {
       // Garantir que não passamos undefined na duplicação também
-      const newCourseData: any = {
+      const newCourseData: Partial<OnlineCourse> = {
         title: `${originalCourse.title} (Cópia)`,
         coverUrl: originalCourse.coverUrl,
         bannerUrlDesktop: originalCourse.bannerUrlDesktop || null,
@@ -488,20 +489,38 @@ export const courseService = {
     try {
         const docRef = doc(db, 'users', userId, 'course_progress', courseId);
         const docSnap = await getDoc(docRef);
-        let completedLessons: string[] = [];
         
+        let lessonProgress: Record<string, any> = {};
+        let completedLessons: string[] = [];
+
         if (docSnap.exists()) {
-            completedLessons = docSnap.data().completedLessons || [];
+            const data = docSnap.data();
+            lessonProgress = data.lessonProgress || {};
+            completedLessons = data.completedLessons || [];
+            
+            // Migração/Compatibilidade
+            if (!data.lessonProgress && data.completedLessons) {
+                data.completedLessons.forEach((id: string) => {
+                    lessonProgress[id] = { completedAt: new Date().toISOString() };
+                });
+            }
         }
 
         if (isCompleted) {
-            if (!completedLessons.includes(lessonId)) completedLessons.push(lessonId);
+            // Marcar como concluído
+            lessonProgress[lessonId] = { completedAt: new Date().toISOString() };
+            if (!completedLessons.includes(lessonId)) {
+                completedLessons.push(lessonId);
+            }
         } else {
+            // Desmarcar: Usar deleteField() para garantir remoção no merge
+            lessonProgress[lessonId] = deleteField();
             completedLessons = completedLessons.filter(id => id !== lessonId);
         }
 
         await setDoc(docRef, {
             completedLessons,
+            lessonProgress,
             lastUpdated: serverTimestamp()
         }, { merge: true });
         return true;
@@ -517,8 +536,31 @@ export const courseService = {
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) return docSnap.data().completedLessons || [];
         return [];
-    } catch (error) {
+    } catch (_error) {
         return [];
+    }
+  },
+
+  getDetailedProgress: async (userId: string, courseId: string): Promise<Record<string, { completedAt: string }>> => {
+    try {
+        const docRef = doc(db, 'users', userId, 'course_progress', courseId);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            if (data.lessonProgress) return data.lessonProgress;
+            
+            // Fallback para dados legados
+            if (data.completedLessons) {
+                const mockProgress: Record<string, { completedAt: string }> = {};
+                data.completedLessons.forEach((id: string) => {
+                    mockProgress[id] = { completedAt: new Date(0).toISOString() };
+                });
+                return mockProgress;
+            }
+        }
+        return {};
+    } catch (_error) {
+        return {};
     }
   },
 
@@ -568,7 +610,7 @@ export const courseService = {
           totalLessons += snapshot.data().count;
       }
       return { totalLessons };
-    } catch (error) {
+    } catch (_error) {
       return { totalLessons: 0 };
     }
   },
@@ -583,7 +625,7 @@ export const courseService = {
         return docSnap.data() as CourseEditalStructure;
       }
       return null;
-    } catch (error) {
+    } catch (_error) {
       return null;
     }
   },
@@ -685,7 +727,7 @@ export const getAllOnlineCourses = async () => {
     }));
 
     // Para cada curso, buscamos sua estrutura (módulos e pastas)
-    const coursesWithStructure = await Promise.all(courses.map(async (course: any) => {
+    const coursesWithStructure = await Promise.all(courses.map(async (course: { id: string } & Partial<OnlineCourse>) => {
       const structure = await courseService.getCourseStructure(course.id);
       return {
         ...course,

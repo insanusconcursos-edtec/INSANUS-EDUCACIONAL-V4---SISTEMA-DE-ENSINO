@@ -103,6 +103,16 @@ interface FolderItemProps {
 const FolderItem: React.FC<FolderItemProps> = ({ folder, lessons, activeLessonId, onSelectLesson, completedLessons }) => {
     const [isOpen, setIsOpen] = useState(false);
     
+    // Lógica de Bloqueio (Drip Content)
+    const isLocked = folder.publishDate && new Date(folder.publishDate) > new Date();
+    const formattedDate = folder.publishDate ? new Date(folder.publishDate).toLocaleString('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    }) : '';
+
     // Abre automaticamente se a aula ativa estiver aqui
     useEffect(() => {
         if (lessons.some(l => l.id === activeLessonId)) setIsOpen(true);
@@ -112,24 +122,38 @@ const FolderItem: React.FC<FolderItemProps> = ({ folder, lessons, activeLessonId
     const isFolderComplete = lessons.length > 0 && folderCompletedCount === lessons.length;
 
     return (
-        <div className="mb-1">
+        <div className={`mb-1 ${isLocked ? 'opacity-60 cursor-not-allowed' : ''}`}>
             <button 
-                onClick={() => setIsOpen(!isOpen)}
-                className="w-full flex items-center justify-between p-3 rounded hover:bg-[#1a1d24] transition-colors text-left group"
+                onClick={() => !isLocked && setIsOpen(!isOpen)}
+                className={`w-full flex items-center justify-between p-3 rounded transition-colors text-left group
+                    ${isLocked ? 'bg-black/20' : 'hover:bg-[#1a1d24]'}
+                `}
+                disabled={isLocked}
             >
                 <div className="flex items-center gap-3 overflow-hidden">
-                    <svg className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-90 text-white' : 'text-gray-500'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
-                    <span className={`text-xs font-bold uppercase truncate ${isFolderComplete ? 'text-green-500' : 'text-gray-300 group-hover:text-white'}`}>
-                        {folder.title}
-                    </span>
+                    {isLocked ? (
+                        <svg className="w-4 h-4 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                    ) : (
+                        <svg className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-90 text-white' : 'text-gray-500'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                    )}
+                    <div className="flex flex-col min-w-0">
+                        <span className={`text-xs font-bold uppercase truncate ${isFolderComplete ? 'text-green-500' : isLocked ? 'text-gray-500' : 'text-gray-300 group-hover:text-white'}`}>
+                            {folder.title}
+                        </span>
+                        {isLocked && (
+                            <span className="text-[9px] text-red-500/70 font-bold uppercase tracking-tighter">
+                                Disponível em: {formattedDate}
+                            </span>
+                        )}
+                    </div>
                 </div>
                 <div className="flex items-center gap-2">
                     {isFolderComplete && <svg className="w-3 h-3 text-green-500" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>}
-                    <span className="text-[9px] text-gray-600 font-mono">{folderCompletedCount}/{lessons.length}</span>
+                    {!isLocked && <span className="text-[9px] text-gray-600 font-mono">{folderCompletedCount}/{lessons.length}</span>}
                 </div>
             </button>
 
-            {isOpen && (
+            {isOpen && !isLocked && (
                 <div className="ml-2 pl-2 border-l border-gray-800 space-y-0.5 mt-1">
                     {lessons.map(lesson => (
                         <LessonRow 

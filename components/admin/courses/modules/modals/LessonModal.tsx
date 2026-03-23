@@ -47,7 +47,7 @@ export function LessonModal({ isOpen, onClose, onSave, initialTitle, initialCove
     if (selectedFile) {
         try {
             finalUrl = await courseService.uploadCover(selectedFile);
-        } catch (error) {
+        } catch {
             alert("Erro no upload da capa");
             setLoading(false);
             return;

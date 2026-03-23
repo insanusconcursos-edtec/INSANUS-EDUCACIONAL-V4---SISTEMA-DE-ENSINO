@@ -255,6 +255,33 @@ export const grantStudentAccess = async (
   const updatedAccess = [...currentAccess, newAccessItem];
 
   await updateDoc(userRef, { access: updatedAccess });
+
+  // --- NEW: ADICIONAR AO COURSE_ENROLLMENTS SE FOR CURSO ---
+  if (data.type === 'course') {
+    try {
+      const enrollmentId = `${data.targetId}_${uid}`;
+      const enrollmentRef = doc(db, 'course_enrollments', enrollmentId);
+      
+      await setDoc(enrollmentRef, {
+        id: enrollmentId,
+        courseId: data.targetId,
+        userId: uid,
+        userName: student.name,
+        userEmail: student.email,
+        userCpf: student.cpf,
+        userPhone: student.whatsapp || '',
+        enrollmentType: data.isScholarship ? 'BOLSISTA' : 'REGULAR',
+        releasedAt: startDate.toISOString(),
+        expiresAt: endDate.toISOString(),
+        active: true,
+        createdAt: serverTimestamp()
+      });
+    } catch (error) {
+      console.error("Erro ao criar registro de matrícula:", error);
+      // Não falhamos a operação principal se a matrícula falhar, 
+      // mas logamos o erro.
+    }
+  }
 };
 
 export const revokeStudentAccess = async (uid: string, accessId: string) => {
@@ -310,6 +337,16 @@ export const revokeStudentAccess = async (uid: string, accessId: string) => {
     access: updatedAccess,
     products: updatedProducts
   });
+
+  // --- NEW: REMOVER DO COURSE_ENROLLMENTS SE FOR CURSO ---
+  if (itemToRevoke.type === 'course') {
+    try {
+      const enrollmentId = `${itemToRevoke.targetId}_${uid}`;
+      await deleteDoc(doc(db, 'course_enrollments', enrollmentId));
+    } catch (error) {
+      console.error("Erro ao remover registro de matrícula:", error);
+    }
+  }
 };
 
 export const extendStudentAccess = async (uid: string, accessId: string, additionalDays: number) => {
@@ -368,6 +405,28 @@ export const extendStudentAccess = async (uid: string, accessId: string, additio
     access: updatedAccess,
     products: updatedProducts
   });
+
+  // --- NEW: ATUALIZAR COURSE_ENROLLMENTS SE FOR CURSO ---
+  if (itemToExtend && itemToExtend.type === 'course') {
+    try {
+      const enrollmentId = `${itemToExtend.targetId}_${uid}`;
+      const enrollmentRef = doc(db, 'course_enrollments', enrollmentId);
+      
+      // Calculate new end date again for the enrollment record
+      const currentEnd = itemToExtend.endDate.toDate();
+      const now = new Date();
+      const baseDate = currentEnd > now ? currentEnd : now;
+      const newEnd = new Date(baseDate);
+      newEnd.setDate(newEnd.getDate() + additionalDays);
+
+      await updateDoc(enrollmentRef, {
+        expiresAt: newEnd.toISOString(),
+        active: true
+      });
+    } catch (error) {
+      console.error("Erro ao atualizar registro de matrícula:", error);
+    }
+  }
 };
 
 // --- CURSOS ONLINE ACCESS ---

@@ -7,11 +7,22 @@ interface StudentCourseCardProps {
 }
 
 export const StudentCourseCard: React.FC<StudentCourseCardProps> = ({ course, onClick }) => {
+  const isScholarship = (course as any).isScholarship;
+
   return (
     <div 
       onClick={() => onClick && onClick(course)}
       className="group relative aspect-[474/1000] rounded-xl overflow-hidden cursor-pointer border border-gray-800 shadow-lg transition-all duration-300 hover:shadow-2xl hover:shadow-red-900/20 hover:border-red-600/30"
     >
+      {/* --- BADGE BOLSISTA --- */}
+      {isScholarship && (
+        <div className="absolute top-2 left-2 z-10">
+          <span className="bg-blue-900/80 backdrop-blur-sm text-blue-400 border border-blue-800 text-[10px] font-black px-2 py-0.5 rounded shadow-lg uppercase tracking-widest">
+            Bolsista
+          </span>
+        </div>
+      )}
+
       {/* --- IMAGEM DA CAPA (Fundo Total) --- */}
       <img 
         src={course.coverUrl} 

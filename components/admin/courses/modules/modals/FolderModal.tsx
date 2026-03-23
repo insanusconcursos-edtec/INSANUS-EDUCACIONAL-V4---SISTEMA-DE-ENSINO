@@ -3,23 +3,28 @@ import React, { useState, useEffect } from 'react';
 interface FolderModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (title: string) => Promise<void>;
+  onSave: (title: string, publishDate: string | null) => Promise<void>;
   initialTitle?: string;
+  initialPublishDate?: string | null;
 }
 
-export function FolderModal({ isOpen, onClose, onSave, initialTitle }: FolderModalProps) {
+export function FolderModal({ isOpen, onClose, onSave, initialTitle, initialPublishDate }: FolderModalProps) {
   const [title, setTitle] = useState('');
+  const [publishDate, setPublishDate] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (isOpen) setTitle(initialTitle || '');
-  }, [isOpen, initialTitle]);
+    if (isOpen) {
+      setTitle(initialTitle || '');
+      setPublishDate(initialPublishDate || null);
+    }
+  }, [isOpen, initialTitle, initialPublishDate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
     setLoading(true);
-    await onSave(title);
+    await onSave(title, publishDate);
     setLoading(false);
     onClose();
   };
@@ -44,6 +49,16 @@ export function FolderModal({ isOpen, onClose, onSave, initialTitle }: FolderMod
               autoFocus
               required
             />
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Data de Liberação (Opcional)</label>
+            <input 
+              type="datetime-local" 
+              value={publishDate || ''}
+              onChange={e => setPublishDate(e.target.value || null)}
+              className="w-full bg-black border border-gray-800 rounded p-3 text-white focus:border-red-600 outline-none"
+            />
+            <p className="text-[10px] text-gray-500 mt-1">Se vazio, a pasta será liberada imediatamente.</p>
           </div>
           <div className="flex justify-end gap-2">
             <button type="button" onClick={onClose} className="px-4 py-2 text-gray-400 hover:text-white font-bold text-xs uppercase">Cancelar</button>

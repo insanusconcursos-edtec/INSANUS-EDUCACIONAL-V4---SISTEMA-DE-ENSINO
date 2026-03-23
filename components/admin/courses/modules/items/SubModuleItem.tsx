@@ -20,6 +20,10 @@ interface SubModuleItemProps {
   onMoveLesson?: (lesson: CourseLesson) => void;
   onManageLesson?: (lesson: CourseLesson) => void;
 
+  // NOVAS PROPS DE SELEÇÃO
+  selectedLessonIds?: string[];
+  onToggleLessonSelection?: (lessonId: string) => void;
+
   onMoveUp?: () => void;
   onMoveDown?: () => void;
   onReorderLesson?: (index: number, direction: 'up' | 'down') => void;
@@ -31,6 +35,7 @@ export const SubModuleItem: React.FC<SubModuleItemProps> = ({
   subModule, lessons, onEdit, onDelete, onAddLesson, 
   isOpen, onToggle,
   onEditLesson, onDeleteLesson, onMoveLesson, onManageLesson,
+  selectedLessonIds = [], onToggleLessonSelection,
   onMoveUp, onMoveDown, onReorderLesson, isFirst, isLast
 }) => {
   
@@ -58,6 +63,11 @@ export const SubModuleItem: React.FC<SubModuleItemProps> = ({
             <Folder size={20} className="text-yellow-600" fill="currentColor" />
             
             <h4 className="text-white font-bold text-sm uppercase">{subModule.title}</h4>
+            {subModule.publishDate && (
+                <span className="text-[10px] text-blue-400 bg-blue-400/10 px-2 py-0.5 rounded border border-blue-400/20">
+                    Agendado: {new Date(subModule.publishDate).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                </span>
+            )}
             <span className="text-[10px] text-gray-500 bg-black/30 px-2 py-0.5 rounded border border-gray-700">
                 {lessons.length} aulas
             </span>
@@ -117,6 +127,10 @@ export const SubModuleItem: React.FC<SubModuleItemProps> = ({
                     onReorderDown={() => onReorderLesson && onReorderLesson(index, 'down')}
                     isFirst={index === 0}
                     isLast={index === lessons.length - 1}
+
+                    // Props de Seleção
+                    isSelected={selectedLessonIds.includes(lesson.id)}
+                    onToggleSelection={onToggleLessonSelection}
                 />
             ))}
         </div>

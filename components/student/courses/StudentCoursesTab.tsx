@@ -62,7 +62,8 @@ export function StudentCoursesTab() {
                         ...course, 
                         grantedAt: access?.createdAt || access?.grantedAt,
                         orderIndex: access?.orderIndex || 0,
-                        accessIndex: accessIndex !== -1 ? accessIndex : 999
+                        accessIndex: accessIndex !== -1 ? accessIndex : 999,
+                        isScholarship: access?.isScholarship || false
                     };
                 })
                 .sort((a, b) => a.accessIndex - b.accessIndex);

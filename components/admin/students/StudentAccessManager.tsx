@@ -103,7 +103,7 @@ const StudentAccessManager: React.FC<StudentAccessManagerProps> = ({ student: in
   }, [fetchStudentData]);
 
   // === HELPERS ===
-  const getDaysRemaining = (endDate: any) => {
+  const getDaysRemaining = (endDate: Timestamp) => {
     if (!endDate || typeof endDate.toDate !== 'function') return 0;
     const end = endDate.toDate();
     const now = new Date();
@@ -112,7 +112,7 @@ const StudentAccessManager: React.FC<StudentAccessManagerProps> = ({ student: in
     return diffDays > 0 ? diffDays : 0;
   };
 
-  const calculateProgress = (start: any, end: any) => {
+  const calculateProgress = (start: Timestamp, end: Timestamp) => {
     if (!start || !end || typeof start.toDate !== 'function' || typeof end.toDate !== 'function') return 0;
     const s = start.toDate().getTime();
     const e = end.toDate().getTime();
@@ -125,7 +125,7 @@ const StudentAccessManager: React.FC<StudentAccessManagerProps> = ({ student: in
     return (elapsed / total) * 100;
   };
 
-  const formatDate = (timestamp: any) => {
+  const formatDate = (timestamp: Timestamp) => {
     if (!timestamp || typeof timestamp.toDate !== 'function') return '---';
     return timestamp.toDate().toLocaleDateString('pt-BR');
   };
@@ -171,7 +171,7 @@ const StudentAccessManager: React.FC<StudentAccessManagerProps> = ({ student: in
         targetId: selectedContentId,
         title,
         days: daysInput,
-        isScholarship: activeModal === 'ADD_PRESENTIAL' ? isScholarship : false
+        isScholarship: (activeModal === 'ADD_PRESENTIAL' || activeModal === 'ADD_COURSE') ? isScholarship : false
       });
 
       await fetchStudentData(); // Immediate Refresh
@@ -318,6 +318,7 @@ const StudentAccessManager: React.FC<StudentAccessManagerProps> = ({ student: in
         onUpdate(); // Notify Parent
         closeModal();
     } catch (error) {
+        console.error("Erro ao estender prazo:", error);
         alert("Erro ao estender prazo.");
     } finally {
         setIsProcessing(false);
@@ -653,7 +654,7 @@ const StudentAccessManager: React.FC<StudentAccessManagerProps> = ({ student: in
                         </div>
                     </div>
 
-                    {activeModal === 'ADD_PRESENTIAL' && (
+                    {(activeModal === 'ADD_PRESENTIAL' || activeModal === 'ADD_COURSE') && (
                       <div className="flex items-center gap-3 mt-4 mb-2 p-3 bg-gray-800/50 border border-gray-700 rounded-lg">
                         <input
                           type="checkbox"
@@ -697,14 +698,24 @@ const StudentAccessManager: React.FC<StudentAccessManagerProps> = ({ student: in
 
 // --- SUB-COMPONENTS ---
 
-const EmptyState = ({ text, icon: Icon }: any) => (
+const EmptyState = ({ text, icon: Icon }: { text: string; icon: React.ElementType }) => (
     <div className="h-full flex flex-col items-center justify-center gap-3 text-zinc-600 border-2 border-dashed border-zinc-800/50 rounded-xl p-8">
         <Icon size={32} className="opacity-50" />
         <span className="text-xs font-black uppercase tracking-wide">{text}</span>
     </div>
 );
 
-const AccessCard = ({ access, colorClass, onRevoke, onExtend, getDaysRemaining, calculateProgress, formatDate }: any) => {
+interface AccessCardProps {
+    access: AccessItem;
+    colorClass: string;
+    onRevoke: () => void;
+    onExtend: () => void;
+    getDaysRemaining: (endDate: Timestamp) => number;
+    calculateProgress: (start: Timestamp, end: Timestamp) => number;
+    formatDate: (timestamp: Timestamp) => string;
+}
+
+const AccessCard = ({ access, colorClass, onRevoke, onExtend, getDaysRemaining, calculateProgress, formatDate }: AccessCardProps) => {
     const daysLeft = getDaysRemaining(access.endDate);
     const progress = calculateProgress(access.startDate, access.endDate);
     
@@ -736,14 +747,16 @@ const AccessCard = ({ access, colorClass, onRevoke, onExtend, getDaysRemaining, 
                 <h4 className="text-sm font-black text-white uppercase tracking-tight line-clamp-1 pr-4">
                     {access.title}
                 </h4>
-                <div className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest border ${daysLeft > 0 ? 'border-emerald-500/30 text-emerald-500 bg-emerald-500/10' : 'border-red-500/30 text-red-500 bg-red-500/10'}`}>
-                    {daysLeft > 0 ? 'Ativo' : 'Expirado'}
+                <div className="flex items-center gap-2">
+                    <div className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest border ${daysLeft > 0 ? 'border-emerald-500/30 text-emerald-500 bg-emerald-500/10' : 'border-red-500/30 text-red-500 bg-red-500/10'}`}>
+                        {daysLeft > 0 ? 'Ativo' : 'Expirado'}
+                    </div>
+                    {access.isScholarship && (
+                        <span className="bg-blue-900/50 text-blue-400 border border-blue-800 text-[10px] font-bold px-2 py-0.5 rounded">
+                            BOLSISTA
+                        </span>
+                    )}
                 </div>
-                {access.isScholarship && (
-                    <span className="bg-blue-900/50 text-blue-400 border border-blue-800 text-[10px] font-bold px-2 py-0.5 rounded ml-2">
-                        BOLSISTA
-                    </span>
-                )}
             </div>
 
             {/* Dates Grid */}

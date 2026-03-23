@@ -6,7 +6,8 @@ import { CourseModuleModal } from './modules/CourseModuleModal';
 import { ModuleContentManager } from './modules/ModuleContentManager';
 import { ConfirmationModal } from '../ui/ConfirmationModal';
 import { AdminCourseEditalManager } from './edital/AdminCourseEditalManager'; // Importando o Gerenciador de Edital
-import { Layout, FileText } from 'lucide-react';
+import { AdminCourseStudentsTab } from './AdminCourseStudentsTab'; // Importando a Aba de Alunos
+import { Layout, FileText, Users } from 'lucide-react';
 
 interface CourseContentManagerProps {
   course: OnlineCourse;
@@ -14,7 +15,7 @@ interface CourseContentManagerProps {
 }
 
 export function CourseContentManager({ course, onBack }: CourseContentManagerProps) {
-  const [activeTab, setActiveTab] = useState<'MODULES' | 'EDITAL'>('MODULES');
+  const [activeTab, setActiveTab] = useState<'MODULES' | 'EDITAL' | 'STUDENTS'>('MODULES');
 
   // --- ESTADOS DE MÓDULOS ---
   const [modules, setModules] = useState<CourseModule[]>([]);
@@ -117,6 +118,12 @@ export function CourseContentManager({ course, onBack }: CourseContentManagerPro
               >
                   <FileText size={14} /> Edital Verticalizado
               </button>
+              <button 
+                  onClick={() => setActiveTab('STUDENTS')}
+                  className={`px-4 py-2 rounded-md text-xs font-bold uppercase flex items-center gap-2 transition-all ${activeTab === 'STUDENTS' ? 'bg-zinc-800 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}`}
+              >
+                  <Users size={14} /> Alunos
+              </button>
           </div>
       </div>
 
@@ -124,6 +131,8 @@ export function CourseContentManager({ course, onBack }: CourseContentManagerPro
       <div className={`flex-1 ${activeTab === 'MODULES' ? 'overflow-hidden' : ''}`}>
           {activeTab === 'EDITAL' ? (
               <AdminCourseEditalManager courseId={course.id} />
+          ) : activeTab === 'STUDENTS' ? (
+              <AdminCourseStudentsTab courseId={course.id} />
           ) : (
              <div className="space-y-6 h-full overflow-y-auto custom-scrollbar p-1">
                 <div className="flex justify-end">

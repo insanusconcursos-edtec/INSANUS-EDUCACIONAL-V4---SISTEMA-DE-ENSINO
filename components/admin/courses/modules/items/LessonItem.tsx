@@ -23,6 +23,10 @@ interface LessonItemProps {
   onMove: () => void; // Mover de Pasta
   onManageContent: () => void;
   
+  // NOVAS PROPS DE SELEÇÃO
+  isSelected?: boolean;
+  onToggleSelection?: (lessonId: string) => void;
+
   // NOVAS PROPS DE ORDENAÇÃO
   onReorderUp: () => void;
   onReorderDown: () => void;
@@ -32,6 +36,7 @@ interface LessonItemProps {
 
 export const LessonItem: React.FC<LessonItemProps> = ({ 
   lesson, onEdit, onDelete, onMove, onManageContent, 
+  isSelected = false, onToggleSelection,
   onReorderUp, onReorderDown, isFirst, isLast 
 }) => {
   
@@ -40,7 +45,18 @@ export const LessonItem: React.FC<LessonItemProps> = ({
   const hasPdfs = (lesson.pdfCount || 0) > 0;
 
   return (
-    <div className="flex items-center gap-3 p-3 bg-[#1a1d24] border border-gray-800 rounded-lg hover:border-gray-600 transition-colors group">
+    <div className={`flex items-center gap-3 p-3 bg-[#1a1d24] border ${isSelected ? 'border-red-600/50 bg-red-900/5' : 'border-gray-800'} rounded-lg hover:border-gray-600 transition-colors group`}>
+      
+      {/* Checkbox de Seleção */}
+      <div className="flex items-center justify-center pr-1">
+        <input 
+          type="checkbox" 
+          checked={isSelected}
+          onChange={() => onToggleSelection && onToggleSelection(lesson.id)}
+          className="w-4 h-4 rounded border-gray-700 bg-black text-red-600 focus:ring-red-600 focus:ring-offset-black cursor-pointer"
+        />
+      </div>
+
       {/* Capa ou Ícone */}
       <div className="w-16 h-10 bg-black rounded overflow-hidden flex items-center justify-center shrink-0 border border-gray-800 relative">
         {lesson.coverUrl ? (

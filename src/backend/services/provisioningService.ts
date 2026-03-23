@@ -1,43 +1,52 @@
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore, FieldValue, Timestamp } from 'firebase-admin/firestore';
-import { getAuth } from 'firebase-admin/auth';
+import { getAdminConfig } from './firebaseAdmin.js';
 import { sendWelcomeEmail } from './emailService.js';
 import crypto from 'crypto';
+import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 
-// LAZY INITIALIZATION MODULAR
-const getAdminConfig = () => {
-  if (getApps().length === 0) {
-    try {
-      let privateKey = process.env.FIREBASE_PRIVATE_KEY || '';
-      if (privateKey.startsWith('"') && privateKey.endsWith('"')) {
-        privateKey = privateKey.slice(1, -1);
-      }
-      privateKey = privateKey.replace(/\\n/g, '\n');
+interface CustomerData {
+  email: string;
+  name: string;
+  document_number?: string;
+  cpf?: string;
+  phone?: string | { ddi?: string; ddd?: string; number?: string };
+  phone_number?: string;
+  cellphone?: string;
+  full_phone?: string;
+  contact?: {
+    phone?: string;
+    phone_number?: string;
+    cellphone?: string;
+  };
+}
 
-      initializeApp({
-        credential: cert({
-          projectId: process.env.FIREBASE_PROJECT_ID,
-          clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-          privateKey: privateKey,
-        }),
-      });
-      console.log('Firebase Admin inicializado com sucesso (Lazy Modular).');
-    } catch (error) {
-      console.error('Falha crítica ao inicializar Firebase Admin:', error);
-      throw error;
-    }
-  }
-  return { dbAdmin: getFirestore(), authAdmin: getAuth() };
-};
+interface UserAccess {
+  id: string;
+  type: string;
+  targetId: string;
+  tictoId: string;
+  title: string;
+  days: number;
+  startDate: Timestamp | FieldValue;
+  endDate: Timestamp | FieldValue;
+  isActive: boolean;
+  resources?: {
+    plans?: string[];
+    onlineCourses?: string[];
+    presentialClasses?: string[];
+    simulated?: string[];
+  };
+  orderIndex?: number;
+  revokedAt?: Date;
+}
 
-export const provisionTictoPurchase = async (customerData: any, tictoProductId: string) => {
+export const provisionTictoPurchase = async (customerData: CustomerData, tictoProductId: string) => {
   const { dbAdmin, authAdmin } = getAdminConfig();
   try {
     const safeProductId = String(tictoProductId);
     const cpf = customerData.document_number || customerData.cpf || '';
     
     // Extração robusta do telefone (Contato/WhatsApp)
-    const getPhone = (data: any) => {
+    const getPhone = (data: CustomerData) => {
       const p = data.phone || data.phone_number || data.cellphone || data.full_phone || 
                 (data.contact && (data.contact.phone || data.contact.phone_number || data.contact.cellphone));
       if (!p) return '';
@@ -62,7 +71,16 @@ export const provisionTictoPurchase = async (customerData: any, tictoProductId: 
 
     console.log(`Produto encontrado. Criando usuário no Auth...`);
     const productDoc = productsSnapshot.docs[0];
-    const productData = productDoc.data();
+    const productData = productDoc.data() as { 
+      name: string; 
+      accessDays?: number; 
+      linkedResources?: {
+        plans?: string[];
+        onlineCourses?: string[];
+        presentialClasses?: string[];
+        simulated?: string[];
+      } 
+    };
     const accessDays = productData.accessDays || 365;
     const linkedResources = productData.linkedResources || {
       plans: [],
@@ -76,10 +94,10 @@ export const provisionTictoPurchase = async (customerData: any, tictoProductId: 
     expirationDate.setDate(expirationDate.getDate() + accessDays);
 
     // 2. Preparar array de acessos (Flattening)
-    const accessesToGrant: any[] = [];
+    const accessesToGrant: UserAccess[] = [];
 
     // Inserir o Produto (Combo)
-    const productAccess = {
+    const productAccess: UserAccess = {
       id: crypto.randomUUID(),
       type: 'product',
       targetId: productDoc.id,
@@ -94,14 +112,14 @@ export const provisionTictoPurchase = async (customerData: any, tictoProductId: 
     accessesToGrant.push(productAccess);
 
     // Inserir Recursos Vinculados Individualmente (Achatamento)
-    let resourcesArray: any[] = [];
+    let resourcesArray: { id: string; type: string; name?: string; title?: string }[] = [];
     if (Array.isArray(linkedResources)) {
       resourcesArray = linkedResources;
     } else if (linkedResources && typeof linkedResources === 'object') {
-      if (linkedResources.plans) linkedResources.plans.forEach((id: any) => resourcesArray.push({ id, type: 'plan' }));
-      if (linkedResources.onlineCourses) linkedResources.onlineCourses.forEach((id: any) => resourcesArray.push({ id, type: 'course' }));
-      if (linkedResources.simulated) linkedResources.simulated.forEach((id: any) => resourcesArray.push({ id, type: 'simulated_class' }));
-      if (linkedResources.presentialClasses) linkedResources.presentialClasses.forEach((id: any) => resourcesArray.push({ id, type: 'presential_class' }));
+      if (linkedResources.plans) linkedResources.plans.forEach((id: string) => resourcesArray.push({ id, type: 'plan' }));
+      if (linkedResources.onlineCourses) linkedResources.onlineCourses.forEach((id: string) => resourcesArray.push({ id, type: 'course' }));
+      if (linkedResources.simulated) linkedResources.simulated.forEach((id: string) => resourcesArray.push({ id, type: 'simulated_class' }));
+      if (linkedResources.presentialClasses) linkedResources.presentialClasses.forEach((id: string) => resourcesArray.push({ id, type: 'presential_class' }));
     }
 
     for (let index = 0; index < resourcesArray.length; index++) {
@@ -152,8 +170,9 @@ export const provisionTictoPurchase = async (customerData: any, tictoProductId: 
 
     try {
       userRecord = await authAdmin.getUserByEmail(customerData.email);
-    } catch (error: any) {
-      if (error.code === 'auth/user-not-found') {
+    } catch (error: unknown) {
+      const authError = error as { code: string };
+      if (authError.code === 'auth/user-not-found') {
         isNewUser = true;
       } else {
         throw error;
@@ -192,7 +211,7 @@ export const provisionTictoPurchase = async (customerData: any, tictoProductId: 
         status: 'active',
         createdAt: FieldValue.serverTimestamp(),
         access: accessesToGrant,
-        products: accessesToGrant.filter(a => a.type === 'product')
+        products: accessesToGrant.filter((a: UserAccess) => a.type === 'product')
       };
 
       await dbAdmin.collection('users').doc(userRecord.uid).set(newUserDoc);
@@ -224,9 +243,9 @@ export const provisionTictoPurchase = async (customerData: any, tictoProductId: 
       } else {
         // Atualiza o documento adicionando os novos acessos
         const userData = userDoc.data() || {};
-        const currentAccess = userData.access || [];
+        const currentAccess = (userData.access || []) as UserAccess[];
 
-        const updateData: any = { status: 'active' };
+        const updateData: { status: string; cpf?: string; whatsapp?: string; contact?: string; access?: FieldValue; products?: FieldValue } = { status: 'active' };
         
         // Atualização defensiva de CPF e telefone (Contato/WhatsApp)
         if (!userData.cpf && cpf) updateData.cpf = cpf;
@@ -234,10 +253,10 @@ export const provisionTictoPurchase = async (customerData: any, tictoProductId: 
         if (!userData.contact && phone) updateData.contact = phone;
 
         // Verifica se já possui o acesso ativo para não duplicar
-        const hasActiveAccess = currentAccess.some((acc: any) => 
+        const hasActiveAccess = currentAccess.some((acc: UserAccess) => 
           acc.tictoId === safeProductId && 
           acc.endDate && 
-          acc.endDate.toDate() > new Date()
+          (acc.endDate as Timestamp).toDate() > new Date()
         );
 
         if (!hasActiveAccess) {
@@ -279,8 +298,9 @@ export const revokeTictoPurchase = async (email: string, tictoProductId: string)
     let userRecord;
     try {
       userRecord = await authAdmin.getUserByEmail(email);
-    } catch (error: any) {
-      if (error.code === 'auth/user-not-found') {
+    } catch (error: unknown) {
+      const authError = error as { code: string };
+      if (authError.code === 'auth/user-not-found') {
         console.log(`[REVOGAÇÃO] Usuário com e-mail ${email} não encontrado no Auth.`);
         return { success: false, message: 'Usuário não encontrado.' };
       }
@@ -296,12 +316,13 @@ export const revokeTictoPurchase = async (email: string, tictoProductId: string)
     }
 
     const userData = userDoc.data() || {};
-    const currentAccess = userData.access || [];
-    const currentProducts = userData.products || [];
+    const currentAccess = (userData.access || []) as UserAccess[];
+    // _currentProducts is not used but kept for reference
+    // const _currentProducts = userData.products || [];
 
     // 3. Percorre o array access do utilizador. Para cada item de acesso que corresponda ao produto cancelado, altere a propriedade isActive para false
     let hasChanges = false;
-    const updatedAccess = currentAccess.map((acc: any) => {
+    const updatedAccess = currentAccess.map((acc: UserAccess) => {
       if (acc.tictoId === safeProductId && acc.isActive !== false) {
         hasChanges = true;
         return { ...acc, isActive: false, revokedAt: new Date() };

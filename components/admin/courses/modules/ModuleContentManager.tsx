@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Folder } from 'lucide-react';
+import { Folder, Download, Wand2 } from 'lucide-react';
 import { CourseModule, CourseSubModule, CourseLesson } from '../../../../types/course';
 import { courseService } from '../../../../services/courseService';
 import { LessonItem } from './items/LessonItem';
@@ -7,7 +7,9 @@ import { SubModuleItem } from './items/SubModuleItem';
 import { FolderModal } from './modals/FolderModal';
 import { LessonModal } from './modals/LessonModal';
 import { ConfirmationModal } from '../../ui/ConfirmationModal';
-import { LessonContentManager } from '../lessons/LessonContentManager'; // Import the new component
+import { LessonContentManager } from '../lessons/LessonContentManager';
+import { PDFTemplate } from '../../../../src/frontend/components/PDFTemplate';
+import html2pdf from 'html2pdf.js';
 
 interface ModuleContentManagerProps {
   module: CourseModule;
@@ -44,6 +46,157 @@ export function ModuleContentManager({ module, onBack }: ModuleContentManagerPro
     }));
   };
 
+  // NOVO ESTADO: Controle de Seleção para IA
+  const [selectedLessonIds, setSelectedLessonIds] = useState<string[]>([]);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generatedMarkdown, setGeneratedMarkdown] = useState<string | null>(null);
+  
+  // Novos Campos para Geração de PDF
+  const [disciplinaName, setDisciplinaName] = useState('');
+  const [disciplinaAssunto, setDisciplinaAssunto] = useState('');
+  const [watermark, setWatermark] = useState<string | null>(null);
+  const [includeTOC, setIncludeTOC] = useState(false);
+  const containerRef = React.useRef<HTMLDivElement>(null);
+
+  const toggleLessonSelection = (lessonId: string) => {
+    setSelectedLessonIds(prev => 
+      prev.includes(lessonId) 
+        ? prev.filter(id => id !== lessonId) 
+        : [...prev, lessonId]
+    );
+  };
+
+  const handleGenerateMaterial = async () => {
+    if (selectedLessonIds.length === 0) return;
+    
+    setIsGenerating(true);
+    try {
+      // Chamar a API de geração enviando apenas os IDs das aulas
+      const response = await fetch('/api/generate-material', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          lessonIds: selectedLessonIds,
+          folderTitle: module.title 
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Erro do servidor (${response.status}): ${errorText.substring(0, 150)}`);
+      }
+
+      const data = await response.json();
+
+      if (data.success) {
+        setGeneratedMarkdown(data.markdown);
+        console.log("Material gerado com sucesso!");
+        console.log("--- MATERIAL DIDÁTICO GERADO (MARKDOWN) ---");
+        console.log(data.markdown);
+        console.log("-------------------------------------------");
+        // Opcional: Limpar seleção
+        setSelectedLessonIds([]);
+      } else {
+        console.error("Erro ao gerar material: " + (data.error || "Erro desconhecido"));
+      }
+    } catch (error) {
+      console.error("Erro ao gerar material:", error);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleDownloadPDF = () => {
+    if (!generatedMarkdown) return;
+
+    const originalElement = document.getElementById('insanus-pdf-container');
+    if (!originalElement) {
+        console.error("Erro: Container de PDF não encontrado.");
+        return;
+    }
+
+    // Cria um clone perfeito para não bugar a tela do usuário
+    const element = originalElement.cloneNode(true) as HTMLElement; 
+
+    // Amarra o título com o próximo parágrafo numa div indestrutível
+    const headings = element.querySelectorAll('h1, h2, h3, h4');
+    headings.forEach(heading => {
+      const nextEl = heading.nextElementSibling;
+      // Se o próximo elemento existe e não é outro título...
+      if (nextEl && !['H1', 'H2', 'H3', 'H4'].includes(nextEl.tagName)) {
+        const wrapper = document.createElement('div');
+        wrapper.style.pageBreakInside = 'avoid';
+        // @ts-expect-error - breakInside is not in all CSSStyleDeclaration types
+        wrapper.style.breakInside = 'avoid';
+        if (heading.parentNode) {
+          heading.parentNode.insertBefore(wrapper, heading);
+          wrapper.appendChild(heading);
+          wrapper.appendChild(nextEl);
+        }
+      }
+    });
+
+    const opt = {
+      margin:       [25, 15, 25, 15], // [Top, Left, Bottom, Right] em mm
+      filename:     `${disciplinaName || 'Material'} - ${disciplinaAssunto || 'Insanus'}.pdf`,
+      image:        { type: 'jpeg', quality: 1 },
+      html2canvas:  { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
+      pagebreak:    { mode: ['css', 'legacy'], avoid: ['p', 'h1', 'h2', 'h3', 'h4', 'li', 'blockquote'] },
+      jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+
+    // @ts-expect-error html2pdf is not typed
+    html2pdf().set(opt).from(element).toPdf().get('pdf').then(function (pdf: { internal: { getNumberOfPages: () => number, pageSize: { getWidth: () => number, getHeight: () => number } }, setPage: (page: number) => void, setGState: (state: any) => void, GState: any, getImageProperties: (img: string) => { width: number, height: number }, addImage: (img: string, format: string, x: number, y: number, w: number, h: number) => void, setFont: (font: string, style: string) => void, setFontSize: (size: number) => void, text: (text: string, x: number, y: number, options?: any) => void, setLineWidth: (width: number) => void, line: (x1: number, y1: number, x2: number, y2: number) => void, setTextColor: (color: number) => void }) {
+      const totalPages = pdf.internal.getNumberOfPages();
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+
+      for (let i = 1; i <= totalPages; i++) {
+        pdf.setPage(i);
+
+        // --- MARCA D'ÁGUA ---
+        if (watermark) {
+          try {
+            // Configura opacidade para 10% (suportado no jsPDF mais recente)
+            pdf.setGState(new pdf.GState({ opacity: 0.1 }));
+            const imgProps = pdf.getImageProperties(watermark);
+            const imgWidth = 140; // Largura base
+            const imgHeight = (imgProps.height * imgWidth) / imgProps.width; // Altura proporcional
+            const x = (pageWidth - imgWidth) / 2;
+            const y = (pageHeight - imgHeight) / 2;
+            pdf.addImage(watermark, 'PNG', x, y, imgWidth, imgHeight);
+            pdf.setGState(new pdf.GState({ opacity: 1.0 })); // Restaura a opacidade para o texto
+          } catch (e) {
+            console.error("Erro ao aplicar marca d'água:", e);
+          }
+        }
+
+        // --- CABEÇALHO ---
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(11);
+        // Texto Esquerda
+        pdf.text("INSANUS CONCURSOS", 15, 15);
+        // Texto Direita (Nome da Disciplina)
+        pdf.setFont('helvetica', 'normal');
+        pdf.text((disciplinaName || '').toUpperCase(), pageWidth - 15, 15, { align: 'right' });
+        // Linha do Cabeçalho
+        pdf.setLineWidth(0.5);
+        pdf.line(15, 17, pageWidth - 15, 17);
+
+        // --- RODAPÉ ---
+        pdf.setFontSize(7);
+        pdf.setTextColor(100);
+        const copyrightText = "LEI DO DIREITO AUTORAL-N° 9.610 de 19 de FEVEREIRO de 1998\nPROIBE-SE A COMERCIALIZAÇÃO TOTAL OU PARCIAL DESSE MATERIAL OU DIVULGAÇÃO COM FINS COMERCIAIS OU NÃO,\nEM QUALQUER MEIO DE COMUNICAÇÃO, INCLUSIVE NA INTERNET, SEM AUTORIZAÇÃO EXPRESSA DO INSANUS CONCURSOS.";
+        pdf.text(copyrightText, pageWidth / 2, pageHeight - 15, { align: 'center' });
+
+        // Paginação
+        pdf.setFontSize(10);
+        pdf.setTextColor(0);
+        pdf.text(String(i), pageWidth - 15, pageHeight - 10, { align: 'right' });
+      }
+    }).save();
+  };
+
   // Carregar Dados
   const loadContent = async () => {
     setLoading(true);
@@ -66,18 +219,19 @@ export function ModuleContentManager({ module, onBack }: ModuleContentManagerPro
   }, [module.id]);
 
   // --- CRUD PASTAS ---
-  const handleSaveFolder = async (title: string) => {
+  const handleSaveFolder = async (title: string, publishDate: string | null) => {
     try {
       if (editingFolder) {
-        await courseService.updateSubModule(editingFolder.id, { title });
+        await courseService.updateSubModule(editingFolder.id, { title, publishDate });
         // Atualização Otimista
-        setSubModules(prev => prev.map(s => s.id === editingFolder.id ? { ...s, title } : s));
+        setSubModules(prev => prev.map(s => s.id === editingFolder.id ? { ...s, title, publishDate } : s));
       } else {
         const newOrder = subModules.length > 0 ? Math.max(...subModules.map(s => s.order)) + 1 : 1;
         const newId = await courseService.createSubModule({ 
             title, 
             moduleId: module.id, 
-            order: newOrder 
+            order: newOrder,
+            publishDate
         });
 
         // Atualização Otimista
@@ -85,7 +239,8 @@ export function ModuleContentManager({ module, onBack }: ModuleContentManagerPro
             id: newId,
             moduleId: module.id,
             title,
-            order: newOrder
+            order: newOrder,
+            publishDate
         }]);
 
         // Abre a nova pasta
@@ -95,7 +250,6 @@ export function ModuleContentManager({ module, onBack }: ModuleContentManagerPro
       setEditingFolder(null); // Limpa edição
     } catch (error) {
       console.error("Erro ao salvar pasta:", error);
-      alert("Erro ao salvar pasta");
       loadContent(); // Reverte em caso de erro
     }
   };
@@ -169,7 +323,6 @@ export function ModuleContentManager({ module, onBack }: ModuleContentManagerPro
       setTargetFolderIdForNewLesson(null);
     } catch (error) {
         console.error("Erro ao salvar aula:", error);
-        alert("Erro ao salvar aula");
         loadContent(); // Reverte em caso de erro
     }
   };
@@ -263,7 +416,91 @@ export function ModuleContentManager({ module, onBack }: ModuleContentManagerPro
           <h2 className="text-2xl font-black text-white uppercase">{module.title}</h2>
         </div>
         <div className="flex-1"></div>
-        <div className="flex gap-3">
+        <div className="flex gap-3 items-end">
+            {selectedLessonIds.length > 0 && (
+                <div className="flex flex-col gap-2">
+                    <div className="flex gap-2">
+                        <div className="flex flex-col gap-1">
+                            <label className="text-[10px] font-bold text-gray-500 uppercase">Disciplina</label>
+                            <input 
+                                type="text"
+                                value={disciplinaName}
+                                onChange={e => setDisciplinaName(e.target.value)}
+                                placeholder="Ex: DIREITO CONSTITUCIONAL"
+                                className="bg-black border border-gray-800 rounded px-3 py-2 text-xs text-white focus:border-red-600 outline-none w-48"
+                            />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                            <label className="text-[10px] font-bold text-gray-500 uppercase">Assunto</label>
+                            <input 
+                                type="text"
+                                value={disciplinaAssunto}
+                                onChange={e => setDisciplinaAssunto(e.target.value)}
+                                placeholder="Ex: SEGURANÇA PÚBLICA (ART. 144)"
+                                className="bg-black border border-gray-800 rounded px-3 py-2 text-xs text-white focus:border-red-600 outline-none w-64"
+                            />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                            <label className="text-[10px] font-bold text-gray-500 uppercase">Marca D&apos;água (Opcional)</label>
+                            <input 
+                                type="file" 
+                                accept="image/*" 
+                                onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) {
+                                        const reader = new FileReader();
+                                        reader.onload = (event) => setWatermark(event.target?.result as string);
+                                        reader.readAsDataURL(file);
+                                    }
+                                }} 
+                                className="bg-black border border-gray-800 rounded px-2 py-1 text-[10px] text-white focus:border-red-600 outline-none w-48"
+                            />
+                        </div>
+                        <div className="flex items-center gap-2 pt-4">
+                            <input 
+                                type="checkbox"
+                                id="includeTOC"
+                                checked={includeTOC}
+                                onChange={e => setIncludeTOC(e.target.checked)}
+                                className="w-4 h-4 rounded border-gray-800 bg-black text-red-600 focus:ring-red-600"
+                            />
+                            <label htmlFor="includeTOC" className="text-[10px] font-bold text-gray-400 uppercase cursor-pointer hover:text-white transition-colors">
+                                Incluir Sumário (Índice) na primeira página
+                            </label>
+                        </div>
+                    </div>
+                    <button 
+                        onClick={handleGenerateMaterial}
+                        disabled={isGenerating || !disciplinaName || !disciplinaAssunto}
+                        className={`px-4 py-2 ${isGenerating || !disciplinaName || !disciplinaAssunto ? 'bg-purple-900/50 text-purple-300' : 'bg-purple-600 hover:bg-purple-500 text-white'} font-bold uppercase text-xs rounded flex items-center justify-center gap-2 transition-all shadow-lg shadow-purple-900/20`}
+                    >
+                        {isGenerating ? (
+                            <>
+                                <div className="animate-spin rounded-full h-3 w-3 border-t-2 border-white"></div>
+                                Gerando com IA...
+                            </>
+                        ) : (
+                            <>
+                                <Wand2 size={14} />
+                                Gerar Material Didático (IA) ({selectedLessonIds.length})
+                            </>
+                        )}
+                    </button>
+                </div>
+            )}
+
+            {generatedMarkdown && (
+                <div className="flex gap-2">
+                    <button 
+                        onClick={handleDownloadPDF}
+                        className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold uppercase text-xs rounded px-4 py-2 flex items-center gap-2 transition-all shadow-lg shadow-emerald-900/20"
+                    >
+                        <Download size={14} />
+                        Baixar PDF Padrão Insanus
+                    </button>
+                </div>
+            )}
+
             <button 
                 onClick={() => { setEditingFolder(null); setIsFolderModalOpen(true); }}
                 className="px-4 py-2 bg-[#1a1d24] border border-gray-700 hover:border-gray-500 text-white font-bold uppercase text-xs rounded flex items-center gap-2"
@@ -311,6 +548,10 @@ export function ModuleContentManager({ module, onBack }: ModuleContentManagerPro
                         // Props de Controle de Expansão
                         isOpen={!!expandedFolders[folder.id]}
                         onToggle={() => toggleFolder(folder.id)}
+
+                        // Props de Seleção
+                        selectedLessonIds={selectedLessonIds}
+                        onToggleLessonSelection={toggleLessonSelection}
                     />
                 ))}
 
@@ -331,6 +572,10 @@ export function ModuleContentManager({ module, onBack }: ModuleContentManagerPro
                                 onReorderDown={() => handleReorderLesson(index, 'down', null)}
                                 isFirst={index === 0}
                                 isLast={index === getRootLessons().length - 1}
+
+                                // Props de Seleção
+                                isSelected={selectedLessonIds.includes(lesson.id)}
+                                onToggleSelection={toggleLessonSelection}
                             />
                         ))}
                     </div>
@@ -352,6 +597,7 @@ export function ModuleContentManager({ module, onBack }: ModuleContentManagerPro
         onClose={() => setIsFolderModalOpen(false)}
         onSave={handleSaveFolder}
         initialTitle={editingFolder?.title}
+        initialPublishDate={editingFolder?.publishDate}
       />
 
       <LessonModal
@@ -360,7 +606,7 @@ export function ModuleContentManager({ module, onBack }: ModuleContentManagerPro
         onSave={handleSaveLesson}
         initialTitle={editingLesson?.title}
         initialCover={editingLesson?.coverUrl}
-        initialType={editingLesson?.type} // Passa o tipo atual para edição
+        initialType={editingLesson?.type}
       />
 
       <ConfirmationModal 
@@ -402,6 +648,16 @@ export function ModuleContentManager({ module, onBack }: ModuleContentManagerPro
         </div>
       )}
 
+      {/* Template de PDF Oculto */}
+      {generatedMarkdown && (
+        <PDFTemplate 
+          markdownText={generatedMarkdown}
+          disciplinaName={disciplinaName}
+          disciplinaAssunto={disciplinaAssunto}
+          includeTOC={includeTOC}
+          containerRef={containerRef}
+        />
+      )}
     </div>
   );
 }

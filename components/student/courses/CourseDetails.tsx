@@ -1,12 +1,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { OnlineCourse, CourseModule, CONTEST_STATUS_LABELS } from '../../../types/course';
+import { OnlineCourse, CourseModule, CONTEST_STATUS_LABELS, CourseStructureModule } from '../../../types/course';
 import { courseService } from '../../../services/courseService';
 import { StudentModuleCard } from './StudentModuleCard';
 import { CoursePlayer } from './player/CoursePlayer';
 import { useAuth } from '../../../contexts/AuthContext';
-import { AlertCircle, Calendar, CheckCircle2, Clock, Siren, LayoutList, ListTree, PlayCircle, ArrowLeft } from 'lucide-react';
+import { CheckCircle2, LayoutList, ListTree, PlayCircle, ArrowLeft } from 'lucide-react';
 import { StudentCourseEdital } from './edital/StudentCourseEdital';
 import { CourseReviewDashboard } from './reviews/CourseReviewDashboard';
 
@@ -16,7 +16,7 @@ interface CourseDetailsProps {
 }
 
 export function CourseDetails({ course, onBack }: CourseDetailsProps) {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { currentUser } = useAuth();
   
   // ESTADO DAS ABAS (NOVO) - MÓDULOS ou EDITAL
@@ -27,25 +27,33 @@ export function CourseDetails({ course, onBack }: CourseDetailsProps) {
   const [loading, setLoading] = useState(true);
   const [selectedModule, setSelectedModule] = useState<CourseModule | null>(null);
   
-  // Estado do Progresso Geral
+  // Estado do Progresso e Estrutura para o "Continuar Estudos"
+  const [structure, setStructure] = useState<CourseStructureModule[]>([]);
+  const [detailedProgress, setDetailedProgress] = useState<Record<string, { completedAt: string }>>({});
   const [progress, setProgress] = useState(0);
 
   useEffect(() => {
     const loadData = async () => {
         try {
-            // 1. Carrega Módulos
-            const modulesData = await courseService.getModules(course.id);
+            // 1. Carrega Módulos e Estrutura Completa
+            const [modulesData, structureData] = await Promise.all([
+                courseService.getModules(course.id),
+                courseService.getCourseStructure(course.id)
+            ]);
             setModules(modulesData);
+            setStructure(structureData);
 
             // 2. Calcula Progresso Geral
             if (currentUser) {
-                const [completedIds, stats] = await Promise.all([
+                const [completedLessons, detailed, stats] = await Promise.all([
                     courseService.getCompletedLessons(currentUser.uid, course.id),
+                    courseService.getDetailedProgress(currentUser.uid, course.id),
                     courseService.getCourseStats(course.id)
                 ]);
                 
+                setDetailedProgress(detailed);
                 const total = stats.totalLessons;
-                const completed = completedIds.length;
+                const completed = completedLessons.length;
                 const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
                 
                 setProgress(percentage);
@@ -76,12 +84,71 @@ export function CourseDetails({ course, onBack }: CourseDetailsProps) {
       setFocusTopicId(topicId);
   };
 
+  // Algoritmo de Busca Cronológica (Última Concluída + 1)
+  const handleContinue = () => {
+    if (!currentUser || structure.length === 0) return;
+
+    // 1. Achatamento (Flatten) da grade curricular para uma fila única 1D
+    const flatCurriculum: { moduleId: string, lessonId: string }[] = [];
+    structure.forEach(mod => {
+        mod.folders.forEach(folder => {
+            folder.lessons.forEach(lesson => {
+                flatCurriculum.push({ moduleId: mod.id, lessonId: lesson.id });
+            });
+        });
+        mod.looseLessons.forEach(lesson => {
+            flatCurriculum.push({ moduleId: mod.id, lessonId: lesson.id });
+        });
+    });
+
+    if (flatCurriculum.length === 0) return;
+
+    // 2. Busca Cronológica: Encontra a aula concluída MAIS RECENTEMENTE no tempo
+    let mostRecentIndex = -1;
+    let latestTimestamp = 0;
+
+    for (let i = 0; i < flatCurriculum.length; i++) {
+        const item = flatCurriculum[i];
+        const progress = detailedProgress[item.lessonId];
+        
+        if (progress) {
+            const itemDate = new Date(progress.completedAt).getTime();
+            if (itemDate >= latestTimestamp) {
+                latestTimestamp = itemDate;
+                mostRecentIndex = i;
+            }
+        }
+    }
+
+    let targetItem = null;
+
+    // 3. Regras de Negócio Estritas: Última Concluída + 1
+    if (mostRecentIndex === -1) {
+        // Regra A: Nada concluído -> Vai para a primeiríssima aula do curso
+        targetItem = flatCurriculum[0];
+    } else if (mostRecentIndex + 1 < flatCurriculum.length) {
+        // Regra B: Existe aula após a mais recente concluída -> Vai exatamente para a PRÓXIMA (+1)
+        targetItem = flatCurriculum[mostRecentIndex + 1];
+    } else {
+        // Regra C: O curso todo foi concluído -> Mantém na última aula existente
+        targetItem = flatCurriculum[mostRecentIndex];
+    }
+
+    // 4. Redirecionamento Imediato via URL Params
+    if (targetItem) {
+        setSearchParams({ module: targetItem.moduleId, lesson: targetItem.lessonId });
+    }
+  };
+
   if (selectedModule) {
       return (
         <CoursePlayer 
             course={course} 
             module={selectedModule} 
-            onBack={() => setSelectedModule(null)} 
+            onBack={() => {
+                setSelectedModule(null);
+                setSearchParams({});
+            }} 
         />
       );
   }
@@ -119,7 +186,10 @@ export function CourseDetails({ course, onBack }: CourseDetailsProps) {
           <div className="mb-8">
               <div className="flex flex-col md:flex-row md:items-center gap-4">
                    {/* Botão de Ação Principal */}
-                   <button className="flex items-center justify-center gap-2 bg-white hover:bg-gray-200 text-black px-8 py-3 rounded-lg font-black text-sm uppercase transition-transform hover:scale-105 shadow-[0_0_20px_rgba(255,255,255,0.3)] shrink-0">
+                   <button 
+                    onClick={handleContinue}
+                    className="flex items-center justify-center gap-2 bg-white hover:bg-gray-200 text-black px-8 py-3 rounded-lg font-black text-sm uppercase transition-transform hover:scale-105 shadow-[0_0_20px_rgba(255,255,255,0.3)] shrink-0"
+                   >
                        <PlayCircle size={20} fill="currentColor" />
                        {progress > 0 ? 'CONTINUAR ESTUDOS' : 'INICIAR CURSO'}
                    </button>

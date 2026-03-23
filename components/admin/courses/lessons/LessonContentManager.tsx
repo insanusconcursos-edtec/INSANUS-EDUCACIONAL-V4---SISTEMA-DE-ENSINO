@@ -38,7 +38,7 @@ export function LessonContentManager({ lesson, onBack }: LessonContentManagerPro
     if (editingContent) {
       await courseService.updateContent(editingContent.id, data);
     } else {
-      await courseService.createContent({ ...data, lessonId: lesson.id } as any);
+      await courseService.createContent({ ...data, lessonId: lesson.id } as Omit<CourseContent, 'id'>);
     }
     await loadContents();
     setEditingContent(null);

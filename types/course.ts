@@ -63,6 +63,7 @@ export interface CourseSubModule {
   moduleId: string; // Vincula ao módulo pai
   title: string;
   order: number;
+  publishDate?: string | null; // Adicionado para Drip Content
 }
 
 // --- NOVO: Interface da Aula ---
@@ -130,4 +131,22 @@ export interface CourseContent {
   textContent?: string; // Para Texto (HTML)
   
   embedCode?: string; // Para Códigos (Google Forms, etc)
+}
+
+// --- NOVO: Interface de Matrícula (Enrollment) ---
+export interface CourseEnrollment {
+  id: string;
+  courseId: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  userPhone?: string;
+  userCpf?: string;
+  userAvatar?: string;
+  
+  enrollmentType: 'REGULAR' | 'MIGRACAO' | 'BOLSISTA';
+  
+  releasedAt: string;
+  expiresAt: string;
+  active: boolean;
 }

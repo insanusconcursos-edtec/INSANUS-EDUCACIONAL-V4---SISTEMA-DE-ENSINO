@@ -2,6 +2,7 @@ import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import LoginPage from './pages/LoginPage';
+import MigrationEnrollment from './pages/MigrationEnrollment';
 import PlansPage from './pages/admin/PlansPage';
 import PlanEditor from './pages/admin/PlanEditor'; 
 import StudentManager from './pages/admin/StudentManager'; 
@@ -53,6 +54,7 @@ const App: React.FC = () => {
       <Toaster position="top-right" />
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/migracao/:linkId" element={<MigrationEnrollment />} />
         
         {/* Admin Routes */}
         <Route path="/admin/eventos-ao-vivo/sala/:id" element={

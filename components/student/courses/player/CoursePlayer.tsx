@@ -38,17 +38,13 @@ export function CoursePlayer({ course, module, onBack }: CoursePlayerProps) {
                 setCompletedLessons(completed);
             }
 
-            // Lógica para selecionar aula via URL (pasta) ou a primeira aula
-            const folderId = searchParams.get('folder');
-            if (folderId && lessons.length > 0) {
-                const firstLessonInFolder = lessons.find(l => l.subModuleId === folderId);
-                if (firstLessonInFolder) {
-                    setActiveLesson(firstLessonInFolder);
-                } else if (lessons.length > 0 && !activeLesson) {
-                    setActiveLesson(lessons[0]);
+            // 3. Lógica para abrir aula via URL (Smart Resume)
+            const lessonIdFromUrl = searchParams.get('lesson');
+            if (lessonIdFromUrl && lessons.length > 0) {
+                const target = lessons.find(l => l.id === lessonIdFromUrl);
+                if (target) {
+                    setActiveLesson(target);
                 }
-            } else if (lessons.length > 0 && !activeLesson) {
-                setActiveLesson(lessons[0]);
             }
         } catch (error) {
             console.error(error);
@@ -57,7 +53,7 @@ export function CoursePlayer({ course, module, onBack }: CoursePlayerProps) {
         }
     };
     loadData();
-  }, [module.id, course.id, currentUser]);
+  }, [module.id, course.id, currentUser, searchParams]);
 
   const handleToggleComplete = async () => {
     if (!activeLesson || !currentUser) return;
@@ -78,7 +74,8 @@ export function CoursePlayer({ course, module, onBack }: CoursePlayerProps) {
         await courseService.toggleLessonCompletion(currentUser.uid, course.id, activeLesson.id, !isCurrentlyCompleted);
     } catch (error) {
         console.error("Erro ao salvar progresso", error);
-        // Reverter em caso de erro (opcional, por enquanto apenas logamos)
+        // Reverter UI em caso de falha
+        setCompletedLessons(completedLessons);
     }
   };
 
