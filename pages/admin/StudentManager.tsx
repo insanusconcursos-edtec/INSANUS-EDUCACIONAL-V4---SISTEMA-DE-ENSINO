@@ -19,6 +19,7 @@ import { getSimulatedClasses, SimulatedClass } from '../../services/simulatedSer
 import StudentFormModal from '../../components/admin/students/StudentFormModal';
 import StudentAccessManager from '../../components/admin/students/StudentAccessManager';
 import ConfirmationModal from '../../components/ui/ConfirmationModal';
+import { toast } from 'react-hot-toast';
 
 const StudentManager: React.FC = () => {
   // State
@@ -104,13 +105,16 @@ const StudentManager: React.FC = () => {
     setIsResetting(true);
     try {
         await sendPasswordReset(studentToReset.email);
-        alert(`E-mail de recuperação enviado para ${studentToReset.email}`);
+        toast.success(`E-mail de recuperação enviado para ${studentToReset.email}`, {
+          duration: 5000,
+          icon: '📧'
+        });
         setResetPasswordModalOpen(false);
         setStudentToReset(null);
     } catch (error: unknown) {
         console.error(error);
         const message = error instanceof Error ? error.message : "Erro desconhecido";
-        alert(`Erro: ${message}`);
+        toast.error(`Erro: ${message}`);
     } finally {
         setIsResetting(false);
     }
@@ -137,10 +141,11 @@ const StudentManager: React.FC = () => {
     try {
         await deleteStudent(studentToDelete.uid);
         setStudents(prev => prev.filter(s => s.uid !== studentToDelete.uid));
+        toast.success("Aluno excluído com sucesso!");
         closeModals();
     } catch (error: unknown) {
         const message = error instanceof Error ? error.message : "Erro ao excluir";
-        alert(message);
+        toast.error(message);
     } finally {
         setIsDeleting(false);
     }

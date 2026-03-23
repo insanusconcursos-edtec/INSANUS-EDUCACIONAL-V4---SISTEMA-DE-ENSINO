@@ -1,8 +1,8 @@
 {
   "rewrites": [
     {
-      "source": "/api/(.*)",
-      "destination": "/api/$1"
+      "source": "/api/panda/(.*)",
+      "destination": "https://api-v2.pandavideo.com.br/$1"
     },
     {
       "source": "/(.*)",

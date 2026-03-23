@@ -30,7 +30,7 @@ function cleanVttText(vttText: string): string {
  * @returns Texto da transcrição limpo
  */
 export async function fetchPandaVideoTranscription(videoId: string): Promise<string> {
-  const apiKey = process.env.PANDA_API_KEY || "panda-1b03ca50a629aacb6ee7b0fe58577e3d4509c51eaa4fd9f45f63a4f4d5512c48";
+  const apiKey = process.env.PANDA_API_KEY;
   const cleanVideoId = videoId.replace(/[^a-zA-Z0-9-]/g, '');
 
   console.log(`\n--- BUSCA DE LEGENDA PANDA VIDEO ---`);

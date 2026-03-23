@@ -3,6 +3,7 @@ import { X, Save, Loader2, Upload, Search, Folder, ChevronLeft, PlayCircle } fro
 import { CourseContent, ContentType } from '../../../../../types/course';
 import { courseService } from '../../../../../services/courseService';
 import { RichTextEditor } from '../../../../ui/RichTextEditor';
+import { pandaService } from '../../../../../services/pandaService';
 
 interface ContentModalProps {
   isOpen: boolean;
@@ -56,12 +57,9 @@ export function ContentModal({ isOpen, onClose, onSave, initialData, lessonId }:
   const fetchPandaVideos = async (search: string = '') => {
     setLoadingPanda(true);
     try {
-      const response = await fetch(`/api/panda-videos?search=${encodeURIComponent(search)}`);
-      const data = await response.json();
-      if (data.success) {
-        setPandaVideos(data.videos);
-        setPandaFolders([]); // Limpa pastas na busca por texto
-      }
+      const videos = await pandaService.listVideos(search);
+      setPandaVideos(videos);
+      setPandaFolders([]); // Limpa pastas na busca por texto
     } catch (error) {
       console.error("Erro ao carregar vídeos do Panda:", error);
     } finally {
@@ -72,13 +70,9 @@ export function ContentModal({ isOpen, onClose, onSave, initialData, lessonId }:
   const fetchPandaExplorer = async (folderId: string | null = null) => {
     setLoadingPanda(true);
     try {
-      const url = folderId ? `/api/panda-explorer?folderId=${folderId}` : '/api/panda-explorer';
-      const response = await fetch(url);
-      const data = await response.json();
-      if (data.success) {
-        setPandaVideos(data.videos);
-        setPandaFolders(data.folders);
-      }
+      const { folders, videos } = await pandaService.explorer(folderId);
+      setPandaVideos(videos);
+      setPandaFolders(folders);
     } catch (error) {
       console.error("Erro no explorer do Panda:", error);
     } finally {

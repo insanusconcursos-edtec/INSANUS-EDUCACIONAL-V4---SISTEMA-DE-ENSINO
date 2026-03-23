@@ -117,7 +117,7 @@ async function startServer() {
   // Rota de Listagem de Vídeos do Panda com Busca
   app.get('/api/panda-videos', async (req, res) => {
     try {
-      const apiKey = process.env.PANDA_API_KEY || "panda-1b03ca50a629aacb6ee7b0fe58577e3d4509c51eaa4fd9f45f63a4f4d5512c48";
+      const apiKey = process.env.PANDA_API_KEY;
       const search = req.query.search as string;
       
       let url = 'https://api-v2.pandavideo.com.br/videos?limit=1000';
@@ -362,7 +362,7 @@ async function startServer() {
   // Rota de Explorer do Panda (Pastas e Vídeos Hierárquicos)
   app.get('/api/panda-explorer', async (req, res) => {
     try {
-      const apiKey = process.env.PANDA_API_KEY || "panda-1b03ca50a629aacb6ee7b0fe58577e3d4509c51eaa4fd9f45f63a4f4d5512c48";
+      const apiKey = process.env.PANDA_API_KEY;
       const folderId = req.query.folderId as string | undefined;
 
       // URLs para pastas e vídeos

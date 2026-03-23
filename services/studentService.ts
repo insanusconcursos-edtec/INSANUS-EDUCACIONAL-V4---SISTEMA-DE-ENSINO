@@ -39,6 +39,7 @@ export const getLocalISODate = (date: Date = new Date()): string => {
 export interface StudentPlan extends Plan {
   accessId: string;
   expiryDate: any;
+  isScholarship?: boolean;
 }
 
 export interface StudentRoutine {
@@ -250,7 +251,8 @@ export const getStudentPlans = async (uid: string): Promise<StudentPlan[]> => {
           ...planData,
           id: planSnap.id,
           accessId: access.id,
-          expiryDate: access.endDate
+          expiryDate: access.endDate,
+          isScholarship: access.isScholarship || false
         } as StudentPlan;
       }
       return null;

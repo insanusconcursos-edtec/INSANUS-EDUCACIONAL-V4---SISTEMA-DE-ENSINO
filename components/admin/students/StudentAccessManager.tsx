@@ -25,6 +25,7 @@ import { TictoProduct } from '../../../types/product';
 import { db } from '../../../services/firebase';
 import { doc, writeBatch, Timestamp, collection, getDocs } from 'firebase/firestore';
 import ConfirmationModal from '../../ui/ConfirmationModal';
+import { toast } from 'react-hot-toast';
 
 interface StudentAccessManagerProps {
   student: Student;
@@ -171,15 +172,16 @@ const StudentAccessManager: React.FC<StudentAccessManagerProps> = ({ student: in
         targetId: selectedContentId,
         title,
         days: daysInput,
-        isScholarship: (activeModal === 'ADD_PRESENTIAL' || activeModal === 'ADD_COURSE') ? isScholarship : false
+        isScholarship: (activeModal === 'ADD_PRESENTIAL' || activeModal === 'ADD_COURSE' || activeModal === 'ADD_PLAN') ? isScholarship : false
       });
 
+      toast.success("Acesso liberado com sucesso!");
       await fetchStudentData(); // Immediate Refresh
       onUpdate(); // Notify Parent
       closeModal();
     } catch (error) {
       console.error(error);
-      alert("Erro ao liberar acesso.");
+      toast.error("Erro ao liberar acesso.");
     } finally {
       setIsProcessing(false);
     }
@@ -270,12 +272,13 @@ const StudentAccessManager: React.FC<StudentAccessManagerProps> = ({ student: in
       });
 
       await batch.commit();
+      toast.success("Produto liberado com sucesso!");
       await fetchStudentData();
       onUpdate();
       closeModal();
     } catch (error) {
       console.error(error);
-      alert("Erro ao liberar produto.");
+      toast.error("Erro ao liberar produto.");
     } finally {
       setIsProcessing(false);
     }
@@ -291,13 +294,14 @@ const StudentAccessManager: React.FC<StudentAccessManagerProps> = ({ student: in
     setIsRevoking(true);
     try {
         await revokeStudentAccess(localStudent.uid, accessToRevoke.id);
+        toast.success("Acesso revogado com sucesso!");
         await fetchStudentData(); // Immediate Refresh
         onUpdate(); // Notify Parent
         setRevokeModalOpen(false);
         setAccessToRevoke(null);
     } catch (error) {
         console.error(error);
-        alert("Erro ao revogar.");
+        toast.error("Erro ao revogar.");
     } finally {
         setIsRevoking(false);
     }
@@ -314,12 +318,13 @@ const StudentAccessManager: React.FC<StudentAccessManagerProps> = ({ student: in
     setIsProcessing(true);
     try {
         await extendStudentAccess(localStudent.uid, targetAccessId, daysInput);
+        toast.success("Acesso estendido com sucesso!");
         await fetchStudentData(); // Immediate Refresh
         onUpdate(); // Notify Parent
         closeModal();
     } catch (error) {
         console.error("Erro ao estender prazo:", error);
-        alert("Erro ao estender prazo.");
+        toast.error("Erro ao estender prazo.");
     } finally {
         setIsProcessing(false);
     }
@@ -654,7 +659,7 @@ const StudentAccessManager: React.FC<StudentAccessManagerProps> = ({ student: in
                         </div>
                     </div>
 
-                    {(activeModal === 'ADD_PRESENTIAL' || activeModal === 'ADD_COURSE') && (
+                    {(activeModal === 'ADD_PRESENTIAL' || activeModal === 'ADD_COURSE' || activeModal === 'ADD_PLAN') && (
                       <div className="flex items-center gap-3 mt-4 mb-2 p-3 bg-gray-800/50 border border-gray-700 rounded-lg">
                         <input
                           type="checkbox"
@@ -688,7 +693,11 @@ const StudentAccessManager: React.FC<StudentAccessManagerProps> = ({ student: in
         onClose={() => setRevokeModalOpen(false)}
         onConfirm={handleConfirmRevoke}
         title="Revogar Acesso?"
-        message={`Tem certeza que deseja remover o acesso do aluno ao conteúdo: "${accessToRevoke?.title}"? Esta ação não pode ser desfeita.`}
+        message={
+          accessToRevoke?.type === 'product' 
+            ? `Tem certeza que deseja remover o COMBO "${accessToRevoke?.title}"? Isso revogará AUTOMATICAMENTE todos os cursos, planos e turmas vinculados a este produto. Esta ação não pode ser desfeita.`
+            : `Tem certeza que deseja remover o acesso do aluno ao conteúdo: "${accessToRevoke?.title}"? Esta ação não pode ser desfeita.`
+        }
         isLoading={isRevoking}
       />
 

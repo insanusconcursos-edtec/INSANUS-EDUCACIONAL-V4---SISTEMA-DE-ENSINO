@@ -2,12 +2,12 @@ import React from 'react';
 import { OnlineCourse } from '../../../types/course';
 
 interface StudentCourseCardProps {
-  course: OnlineCourse;
+  course: OnlineCourse & { isScholarship?: boolean };
   onClick?: (course: OnlineCourse) => void;
 }
 
 export const StudentCourseCard: React.FC<StudentCourseCardProps> = ({ course, onClick }) => {
-  const isScholarship = (course as any).isScholarship;
+  const isScholarship = course.isScholarship;
 
   return (
     <div 

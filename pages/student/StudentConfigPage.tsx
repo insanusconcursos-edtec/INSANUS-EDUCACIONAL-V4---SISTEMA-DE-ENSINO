@@ -288,11 +288,18 @@ const StudentConfigPage: React.FC = () => {
                   `}
                 >
                   {/* Active Badge */}
-                  {isSelected && (
-                    <div className="absolute top-3 right-3 bg-brand-red text-white text-[9px] font-black px-2 py-1 rounded shadow-lg z-20 uppercase tracking-wider animate-in zoom-in">
-                      PLANO ATUAL
-                    </div>
-                  )}
+                  <div className="absolute top-3 right-3 flex flex-col gap-2 z-20 items-end">
+                    {isSelected && (
+                      <div className="bg-brand-red text-white text-[9px] font-black px-2 py-1 rounded shadow-lg uppercase tracking-wider animate-in zoom-in">
+                        PLANO ATUAL
+                      </div>
+                    )}
+                    {plan.isScholarship && (
+                      <div className="bg-blue-600 text-white text-[9px] font-black px-2 py-1 rounded shadow-lg uppercase tracking-wider animate-in zoom-in border border-blue-400/30">
+                        BOLSISTA
+                      </div>
+                    )}
+                  </div>
 
                   {/* Image Section */}
                   <div className="w-full aspect-square relative overflow-hidden bg-zinc-950">

@@ -31,6 +31,7 @@ const StudentDashboard: React.FC = () => {
   
   const [loading, setLoading] = useState(true);
   const [currentPlanId, setCurrentPlanId] = useState<string>('');
+  const [isScholarship, setIsScholarship] = useState(false);
 
   // Reschedule State
   const [isRescheduling, setIsRescheduling] = useState(false);
@@ -64,6 +65,11 @@ const StudentDashboard: React.FC = () => {
     try {
         const { planId, overdue, today } = await getDashboardData(currentUser.uid);
         setCurrentPlanId(planId);
+
+        // Fetch Scholarship Status
+        const plans = await getStudentPlans(currentUser.uid);
+        const currentPlan = plans.find(p => p.id === planId);
+        setIsScholarship(currentPlan?.isScholarship || false);
         
         // Helper Mapper
         const mapToGoal = (event: any): StudentGoal => ({
@@ -540,7 +546,12 @@ const StudentDashboard: React.FC = () => {
 
       {/* HEADER */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
-        <div>
+        <div className="relative">
+          {isScholarship && (
+            <div className="absolute -top-6 left-0 bg-blue-600 text-white text-[10px] font-black px-2 py-0.5 rounded border border-blue-400/30 shadow-lg shadow-blue-900/20 animate-in slide-in-from-top-2 duration-500 uppercase tracking-widest">
+              Aluno Bolsista
+            </div>
+          )}
           <h1 className="text-4xl md:text-6xl font-black text-white uppercase tracking-tighter leading-none mb-2">
             Hoje
           </h1>
