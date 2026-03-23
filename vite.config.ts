@@ -19,7 +19,14 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       host: '0.0.0.0',
-      port: 5173
+      port: 5173,
+      proxy: {
+        '/api/panda': {
+          target: 'https://api-v2.pandavideo.com.br',
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/api\/panda/, '')
+        }
+      }
     },
     // Define 'process.env' para evitar erro "process is not defined" no navegador
     // E injeta a API_KEY se disponível
